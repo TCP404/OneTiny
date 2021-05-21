@@ -74,26 +74,7 @@ func main() {
 	r.Run(":" + controller.Port)
 }
 ```
-
-
-```flow
-st=>start: Start:>https://www.boii.xyz[blank]
-e=>end:>https://github/TCP404/
-
-parse=>operation: 根据URL匹配参数
-cond=>condition: 是否为目录
-
-download=>operation: 下载
-show=>subroutine: 展示点击的目录
-read=>operation: 读取目录
-gene=>operation: 生成URL
-display=>operation: 展示目录内容
-
-st->parse->cond
-cond(no)->download(right)->parse
-cond(yes)->read->gene
-gene(left)->parse
-```
+![程序流程图](README/Flowchart.png)
 
 ## TODO
 - [ ] 上传功能
