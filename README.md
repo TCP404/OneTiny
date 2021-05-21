@@ -33,8 +33,8 @@ $ go build
 > TinyServer                              # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录
 > TinyServer.exe                          # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录
 > TinyServer -p {指定端口}                 # 将运行在 http://本机局域网IP:指定端口，共享目录为当前工作目录
-$ TinyServer -r {指定目录}                 # 将运行在 http://本机局域网IP:9090，共享目录为指定目录
-$ TinyServer -r {指定目录} -p {指定端口}    # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录
+> TinyServer -r {指定目录}                 # 将运行在 http://本机局域网IP:9090，共享目录为指定目录
+> TinyServer -r {指定目录} -p {指定端口}    # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录
 ```
 
 **Linux**: 
