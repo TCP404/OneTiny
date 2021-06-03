@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"flag"
 	"net/http"
 	"os"
 	"path"
@@ -21,14 +20,6 @@ const (
 	ROOT       = "/"
 	SEPARATORS = "/"
 )
-
-func init() {
-	wd, _ := os.Getwd()
-	flag.StringVar(&RootPath, "r", wd, "指定对外开放的目录路径")
-	flag.StringVar(&Port, "p", PORT, "指定开放的端口")
-	flag.Parse()
-	RootPath = strings.TrimSuffix(RootPath, SEPARATORS)
-}
 
 func NotFound(c *gin.Context) {
 	c.String(http.StatusNotFound, "404 Page Not Found", nil)
@@ -73,6 +64,8 @@ func ShowFloder(c *gin.Context, floder string) {
 // 下载文件
 func Download(c *gin.Context, filePath string) {
 	c.Writer.WriteHeader(http.StatusOK)
+	// c.Header("Content-Type", "application/octet-stream")
+	// c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Content-Disposition", "attachment; filename="+filePath)
-	c.File("." + filePath)
+	c.File(path.Join(RootPath, filePath))
 }

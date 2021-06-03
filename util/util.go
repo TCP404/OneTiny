@@ -1,38 +1,71 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"net"
-	"os"
 )
 
 // 生成首页HTML内容
 func GenerateHTML(relPath []string, pathTitle string) string {
-	head := `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><link rel="icon" href="data:image/ico;base64,aWNv"><title>Tiny Server</title></head><body><h1>Directory listing for ` + pathTitle + `</h1>`
-	tail := `</body></html>`
+	headHTML := `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><link rel="icon" href="data:image/ico;base64,aWNv"><title>Tiny Server</title></head><body><h1>Directory listing for ` + pathTitle + `</h1><hr /><br />`
+	tailHTML := `<br /><hr /></body></html>`
 
-	html := head
+	html := headHTML
 	for i, f := range relPath {
 		link := fmt.Sprintf("<a href='%s'> %d - %s </a><br />", f, i, f) // <a href='example.go'> 1 - example.go </a><br />
 		html += link
 	}
-	html += tail
+	html += tailHTML
 	return html
 }
 
-func GetIP() (string, bool) {
-	addrs, err := net.InterfaceAddrs()
+func GetIP() (string, error) {
+	ip, err := externalIP()
+	return ip.String(), err
+}
+
+func externalIP() (net.IP, error) {
+	ifaces, err := net.Interfaces()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return nil, err
 	}
-	for _, address := range addrs {
-		// 检查ip地址判断是否回环地址
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String(), true
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 {
+			continue // interface down
+		}
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue // loopback interface
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return nil, err
+		}
+		for _, addr := range addrs {
+			ip := getIpFromAddr(addr)
+			if ip == nil {
+				continue
 			}
+			return ip, nil
 		}
 	}
-	return "", false
+	return nil, errors.New("你好像没有接入局域网？")
+}
+
+func getIpFromAddr(addr net.Addr) net.IP {
+	var ip net.IP
+	switch v := addr.(type) {
+	case *net.IPNet:
+		ip = v.IP
+	case *net.IPAddr:
+		ip = v.IP
+	}
+	if ip == nil || ip.IsLoopback() {
+		return nil
+	}
+	ip = ip.To4()
+	if ip == nil {
+		return nil // not an ipv4 address
+	}
+	return ip
 }
