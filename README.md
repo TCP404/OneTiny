@@ -1,6 +1,41 @@
-# TinyServer
+<p align="center">
+    <img src="README/logo.svg" alt="logo">
+</p>
+<h1 align="center">OneTiny</h1>
+<div align="center">
+  <a href="https://www.boii.xyz">
+    <img src="https://img.shields.io/badge/BLOG-Boii.xyz-1296DB.svg?style=for-the-badge" alt="BLOG">
+  </a>
+</div>
+<br/>
+<div align="center">
+  <strong>局域网文件共享工具</strong>
+</div>
+<br/>
 
-TinyServer 是一个用于局域网内共享文件的微型程序，它能将当前工作目录临时共享目录，对局域网内其他主机共享，通过浏览器访问 `http://局域网IP:9090` 来访问和下载共享目录中的文件。
+<div align="center">
+    <!-- platform -->
+    <!-- <img alt="platform" src="https://img.shields.io/badge/platform-Linux | Windows | Mac-c3c3c3.svg?style=flat-square"/> -->
+    <img alt="platform" src="https://img.shields.io/badge/-Linux-333?style=flat-square&logo=Linux&logoColor=fff"/>
+    <img alt="platform" src="https://img.shields.io/badge/-Windows-0078D6?style=flat-square&logo=Windows"/>
+    <img alt="platform" src="https://img.shields.io/badge/-MacOS-e67e22?style=flat-square&logo=apple&logoColor=fff"/>
+</div>
+<div align="center" >
+	<!--version-->
+    <a href="" target="blank">
+		<img alt="GitHub release" src="https://img.shields.io/github/release/TCP404/OneTiny.svg?style=flat-square&color=1296DB&sort=semver"/>
+    </a>
+	<!--license-->
+    <img alt="GitHub" src="https://img.shields.io/github/license/TCP404/OneTiny.svg?style=flat-square">
+    <!--language-->
+    <a href="https://golang.org" target="blank">
+    	<img alt="language" src="https://img.shields.io/github/go-mod/go-version/TCP404/OneTiny/master?color=00ADD8&label=Golang&logo=Go&logoColor=00ADD8&style=flat-square"/>
+    </a>
+</div>
+<hr />
+
+
+OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前工作目录临时共享目录，对局域网内其他主机共享，通过浏览器访问 `http://局域网IP:9090` 来访问和下载共享目录中的文件。
 
 简而言之与命令 `python -m http.server 9090` 做的是同样的事情。
 
@@ -16,34 +51,53 @@ TinyServer 是一个用于局域网内共享文件的微型程序，它能将当
 Python 太久没碰了也懒得复习，最近又在学 [Golang](https://golang.org) 和 [gin](https://gin-gonic.com/zh-cn/) 框架，且 Golang 可以编译出不依赖于虚拟机的独立的可执行文件，也可以交叉编译，所以采用了 gin 做一个简单的局域网微型服务器。
 
 ## 使用说明
-可从本仓库的 [Release](https://github.com/TCP404/TinyServer/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/TinyServer/releases/download/v0.1.1/TinyServer) 和 [Windows 版](https://github.com/TCP404/TinyServer/releases/download/v0.1.1/TinyServer.exe)，Mac 的同学请下载后自行编译。
+可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.1.1/OneTiny) 和 [Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.1.1/OneTiny.exe)，Mac 的同学请下载后自行编译。
 
-### 安装
+### 下载
+**Linux**
 ```bash
-$ git clone https://github.com/TCP404/TinyServer.git
+$ curl -LJO https://github.com/TCP404/OneTiny/releases/download/v0.1.1/OneTiny
+$ chmod +x ./OneTiny
+$ sudo cp OneTiny /usr/bin
+```
+
+**Windows**
+
+:point_right: [![](https://img.shields.io/github/release/TCP404/OneTiny.svg?style=flat-square&color=1296DB&sort=semver)](https://github.com/TCP404/OneTiny/releases/latest)
+
+<!-- <a href="https://github.com/TCP404/OneTiny/releases/latest" target="blank">
+	<img alt="GitHub release" src="https://img.shields.io/github/release/TCP404/OneTiny.svg?style=flat-square&color=1296DB&sort=semver"/>
+</a> -->
+
+点击最新版本的 `OneTiny.exe` 进行下载
+
+
+### 安装（MacOS必选，Linux、Windows 可选）
+**需先安装[Golang](https://golang.org)**
+```bash
+$ git clone https://github.com/TCP404/OneTiny.git
 $ go mod tidy
 $ go build
 ```
 
 ### 运行
 **Windows**: 
-下载后双击 TinyServer.exe 即可运行（需管理员权限）。
-可以在CMD中切换到 TinyServer.exe 锁在目录，执行一下命令：
+下载后双击 `OneTiny.exe` 即可运行（需管理员权限）。
+可以在CMD中切换到 `OneTiny.exe` 所在目录，执行一下命令：
 ```cmd
-> TinyServer                              # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录
-> TinyServer.exe                          # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录
-> TinyServer -p {指定端口}                 # 将运行在 http://本机局域网IP:指定端口，共享目录为当前工作目录
-> TinyServer -r {指定目录}                 # 将运行在 http://本机局域网IP:9090，共享目录为指定目录
-> TinyServer -r {指定目录} -p {指定端口}    # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录
+> OneTiny                              # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录
+> OneTiny.exe                          # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录
+> OneTiny -p {指定端口}                 # 将运行在 http://本机局域网IP:指定端口，共享目录为当前工作目录
+> OneTiny -r {指定目录}                 # 将运行在 http://本机局域网IP:9090，共享目录为指定目录
+> OneTiny -r {指定目录} -p {指定端口}    # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录
 ```
 
 **Linux**: 
 ```bash
-$ cd {TinyServer所在目录}
-$ ./TinyServer                            # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录
-$ ./TinyServer -p {指定端口}               # 将运行在 http://本机局域网IP:指定端口，共享目录为当前工作目录
-$ ./TinyServer -r {指定目录}               # 将运行在 http://本机局域网IP:9090，共享目录为指定目录
-$ ./TinyServer -r {指定目录} -p {指定端口}  # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录
+$ OneTiny                            # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录
+$ OneTiny -p {指定端口}               # 将运行在 http://本机局域网IP:指定端口，共享目录为当前工作目录
+$ OneTiny -r {指定目录}               # 将运行在 http://本机局域网IP:9090，共享目录为指定目录
+$ OneTiny -r {指定目录} -p {指定端口}  # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录
 ```
 
 
