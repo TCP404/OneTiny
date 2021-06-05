@@ -1,3 +1,5 @@
+> The documentation was written on 06 June 2021.
+
 <p align="center">
     <img src="README/logo.svg" alt="logo">
 </p>
