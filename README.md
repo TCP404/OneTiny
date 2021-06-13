@@ -50,7 +50,7 @@ OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前
 但是这条命令在 Windows 上不可行，所以需要编写一个程序可以运行在 Windows 上实现同样的功能。
 
 ## 开发技术
-Python 太久没碰了也懒得复习，最近又在学 [Golang](https://golang.org) 和 [gin](https://gin-gonic.com/zh-cn/) 框架，且 Golang 可以编译出不依赖于虚拟机的独立的可执行文件，也可以交叉编译，所以采用了 gin 做一个简单的局域网微型服务器。
+最近在学 [Golang](https://golang.org) 和 [gin](https://gin-gonic.com/zh-cn/) 框架，且 Golang 可以编译出不依赖于虚拟机的独立的可执行文件，也可以交叉编译，所以采用了 gin 做一个简单的局域网微型服务器。
 
 ## 使用说明
 可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.1.1/OneTiny) 和 [Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.1.1/OneTiny.exe)，Mac 的同学请下载后自行编译。
@@ -133,6 +133,6 @@ func main() {
 ![程序流程图](README/Flowchart.png)
 
 ## TODO
-- [ ] 上传功能
+- [x] 上传功能
 - [ ] 密码验证功能（防止局域网内监听）
 - [ ] 增加图形界面（使用 [fyne](https://fyne.io/))

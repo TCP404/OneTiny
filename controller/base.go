@@ -13,6 +13,7 @@ import (
 var (
 	RootPath string
 	Port     string
+	currPath string
 )
 
 const (
@@ -21,12 +22,12 @@ const (
 	SEPARATORS = "/"
 )
 
-func NotFound(c *gin.Context) {
-	c.String(http.StatusNotFound, "404 Page Not Found", nil)
-}
-
 func Handler(c *gin.Context) {
 	filePath := c.Param("filename")
+	currPath = filePath
+	if strings.HasSuffix(filePath, ".ico") {
+		return
+	}
 	if IsDir(filePath) {
 		ShowFloder(c, filePath) // 如果是目录，就展示
 	} else {
@@ -43,19 +44,9 @@ func IsDir(filePath string) bool {
 	return finfo.IsDir()
 }
 
-// 读取目录下所有文件
-func ReadDir(absPath string) []string {
-	files, _ := os.ReadDir(absPath)
-	relPaths := make([]string, len(files))
-	for i, f := range files {
-		relPaths[i] = path.Join(strings.TrimPrefix(absPath, RootPath), f.Name())
-	}
-	return relPaths
-}
-
 // 展示目录下所有文件
 func ShowFloder(c *gin.Context, floder string) {
-	relPaths := ReadDir(path.Join(RootPath, floder))
+	relPaths := ReadDir(c, path.Join(RootPath, floder))
 	html := util.GenerateHTML(relPaths, floder)
 	c.Writer.WriteHeader(http.StatusOK)
 	c.Writer.Write([]byte(html))
@@ -68,4 +59,18 @@ func Download(c *gin.Context, filePath string) {
 	// c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Content-Disposition", "attachment; filename="+filePath)
 	c.File(path.Join(RootPath, filePath))
+}
+
+// 读取目录下所有文件
+func ReadDir(c *gin.Context, absPath string) []string {
+	files, err := os.ReadDir(absPath)
+	if err != nil {
+		errorHandle(c, "目录读取失败！")
+		return nil
+	}
+	relPaths := make([]string, len(files))
+	for i, f := range files {
+		relPaths[i] = path.Join(strings.TrimPrefix(absPath, RootPath), f.Name())
+	}
+	return relPaths
 }

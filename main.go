@@ -25,7 +25,7 @@ func main() {
 	r := gin.Default()
 	r.NoRoute(base.NotFound)
 	r.GET("/*filename", base.Handler)
-
+	r.POST("/upload", base.Upload)
 	if ip, err := util.GetIP(); err == nil {
 		log.Printf("Run on   [ http://%s:%s ]", ip, base.Port)
 	} else {

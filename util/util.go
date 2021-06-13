@@ -2,23 +2,8 @@ package util
 
 import (
 	"errors"
-	"fmt"
 	"net"
 )
-
-// 生成首页HTML内容
-func GenerateHTML(relPath []string, pathTitle string) string {
-	headHTML := `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><link rel="icon" href="data:image/ico;base64,aWNv"><title>Tiny Server</title></head><body><h1>Directory listing for ` + pathTitle + `</h1><hr /><br />`
-	tailHTML := `<br /><hr /></body></html>`
-
-	html := headHTML
-	for i, f := range relPath {
-		link := fmt.Sprintf("<a href='%s'> %d - %s </a><br />", f, i, f) // <a href='example.go'> 1 - example.go </a><br />
-		html += link
-	}
-	html += tailHTML
-	return html
-}
 
 func GetIP() (string, error) {
 	ip, err := externalIP()
