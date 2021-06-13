@@ -1,4 +1,4 @@
-module tinyServer
+module oneTiny
 
 go 1.16
 

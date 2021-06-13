@@ -53,12 +53,12 @@ OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前
 最近在学 [Golang](https://golang.org) 和 [gin](https://gin-gonic.com/zh-cn/) 框架，且 Golang 可以编译出不依赖于虚拟机的独立的可执行文件，也可以交叉编译，所以采用了 gin 做一个简单的局域网微型服务器。
 
 ## 使用说明
-可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.1.1/OneTiny) 和 [Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.1.1/OneTiny.exe)，Mac 的同学请下载后自行编译。
+可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.2/OneTiny)、[Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.2/OneTiny.exe)，[Mac 版](https://github.com/TCP404/OneTiny/releases/download/v0.2/OneTiny_mac)，其他系统的同学请下载后自行编译。
 
 ### 下载
 **Linux**
 ```bash
-$ curl -LJO https://github.com/TCP404/OneTiny/releases/download/v0.1.1/OneTiny
+$ curl -LJO https://github.com/TCP404/OneTiny/releases/download/v0.2/OneTiny
 $ chmod +x ./OneTiny
 $ sudo cp OneTiny /usr/bin
 ```
@@ -74,7 +74,7 @@ $ sudo cp OneTiny /usr/bin
 点击最新版本的 `OneTiny.exe` 进行下载
 
 
-### 安装（MacOS必选，Linux、Windows 可选）
+### 安装（其他系统必选，Linux、Windows、MacOS 可选）
 **需先安装[Golang](https://golang.org)**
 ```bash
 $ git clone https://github.com/TCP404/OneTiny.git
@@ -102,6 +102,8 @@ $ OneTiny -r {指定目录}               # 将运行在 http://本机局域网I
 $ OneTiny -r {指定目录} -p {指定端口}  # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录
 ```
 
+**Mac**:
+没有 Mac，待补充。
 
 ## 程序说明
 程序非常简单。
@@ -116,8 +118,8 @@ $ OneTiny -r {指定目录} -p {指定端口}  # 将运行在 http://本机局�
 
 点击链接将重新发起新的请求，解析请求中的路径，判断是否为目录;
 
-是 -> 读取目录下所有文件及子目录，生成链接，返回给客户端
-否 -> 调用下载函数，将文件内容返回给客户端完成下载。
+- 是 -> 读取目录下所有文件及子目录，生成链接，返回给客户端
+- 否 -> 调用下载函数，将文件内容返回给客户端完成下载。
 
 ```go
 func main() {
