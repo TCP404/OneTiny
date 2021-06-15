@@ -91,5 +91,4 @@ func sizeFmt(bit int64) string {
 		unit = "G"
 	}
 	return strconv.FormatFloat(sizeFloat, 'f', 2, 64) + unit
-
 }
