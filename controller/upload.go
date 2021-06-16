@@ -7,6 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var (
+	IsAllowUpload bool
+)
+
 func Upload(c *gin.Context) {
 	f, err := c.FormFile("upload_file")
 	if err != nil {

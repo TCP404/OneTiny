@@ -49,7 +49,7 @@ func IsDir(filePath string) bool {
 // 展示目录下所有文件
 func ShowFloder(c *gin.Context, rel string) {
 	files := ReadDir(c, path.Join(RootPath, rel))
-	html := util.GenerateHTML(files, rel)
+	html := util.GenerateHTML(files, rel, IsAllowUpload)
 	c.Writer.WriteHeader(http.StatusOK)
 	c.Writer.Write([]byte(html))
 }

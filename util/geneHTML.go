@@ -2,18 +2,20 @@ package util
 
 import (
 	"fmt"
+	"oneTiny/model"
 	"strconv"
 	"strings"
-	"oneTiny/model"
 )
 
 // 生成首页HTML内容
-func GenerateHTML(files []model.FileStruction, pathTitle string) string {
+func GenerateHTML(files []model.FileStruction, pathTitle string, IsAllowUpload bool) string {
 	headHTML := head(pathTitle)
-	formHTML := upload()
+	if IsAllowUpload {
+		headHTML += upload()
+	}
 	fileListHTML := fileList(files)
 	tailHTML := `<br /><hr /></body></html>`
-	return headHTML + formHTML + fileListHTML + tailHTML
+	return headHTML + fileListHTML + tailHTML
 }
 
 func head(pathTitle string) string {
