@@ -53,13 +53,13 @@ OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前
 最近在学 [Golang](https://golang.org) 和 [gin](https://gin-gonic.com/zh-cn/) 框架，且 Golang 可以编译出不依赖于虚拟机的独立的可执行文件，也可以交叉编译，所以采用了 gin 做一个简单的局域网微型服务器。
 
 ## 使用说明
-可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.2/OneTiny)、[Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.2/OneTiny.exe)，[Mac 版](https://github.com/TCP404/OneTiny/releases/download/v0.2/OneTiny_mac)，其他系统的同学请下载后自行编译。
+可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny)、[Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny.exe)，[Mac 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny_mac)，其他系统的同学请下载后自行编译。
 
 ### 下载
 **Linux**
 ```bash
-$ curl -LJO https://github.com/TCP404/OneTiny/releases/download/v0.2/OneTiny
-$ chmod +x ./OneTiny
+$ curl -LJO https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny
+$ chmod u+x ./OneTiny
 $ sudo cp OneTiny /usr/bin
 ```
 
@@ -67,11 +67,18 @@ $ sudo cp OneTiny /usr/bin
 
 :point_right: [![](https://img.shields.io/github/release/TCP404/OneTiny.svg?style=flat-square&color=1296DB&sort=semver)](https://github.com/TCP404/OneTiny/releases/latest)
 
-<!-- <a href="https://github.com/TCP404/OneTiny/releases/latest" target="blank">
-	<img alt="GitHub release" src="https://img.shields.io/github/release/TCP404/OneTiny.svg?style=flat-square&color=1296DB&sort=semver"/>
-</a> -->
-
 点击最新版本的 `OneTiny.exe` 进行下载
+
+**Mac**
+
+```bash
+% curl -LJO https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny
+% chmod u+x OneTiny_mac             # 赋予执行权限
+% mv OneTiny_mac /usr/bin/OneTiny   # 移动到可执行文件目录并修改可执行文件名称
+```
+第一次打开会提示未验证开发者，可以打开“访达”，打开文件所在目录，在 `OneTiny` 文件处右键打开。
+
+之后就可以直接用命令行运行了。
 
 
 ### 安装（其他系统必选，Linux、Windows、MacOS 可选）
@@ -93,7 +100,7 @@ $ go build
 > OneTiny -r {指定目录}                  # 将运行在 http://本机局域网IP:9090，共享目录为指定目录，不允许上传
 > OneTiny -a [1|t|T|true|True|TRUE|空]  # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，允许上传
 > OneTiny -r {指定目录} -p {指定端口} -a  # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录，允许上传
-> OneTiny -#                           # 打印帮助信息
+> OneTiny -h                           # 打印帮助信息
 ```
 
 **Linux**: 
@@ -107,7 +114,14 @@ $ OneTiny -h                          # 打印帮助信息
 ```
 
 **Mac**:
-没有 Mac，待补充。
+```bash
+$ OneTiny                              # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，不允许上传
+$ OneTiny -p {指定端口}                 # 将运行在 http://本机局域网IP:指定端口，共享目录为当前工作目录，不允许上传
+$ OneTiny -r {指定目录}                 # 将运行在 http://本机局域网IP:9090，共享目录为指定目录，不允许上传
+$ OneTiny -a [1|t|T|true|True|TRUE|空] # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，允许上传
+$ OneTiny -r {指定目录} -p {指定端口}    # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录
+$ OneTiny -h                          # 打印帮助信息
+```
 
 ### 访问
 1. 运行程序后，程序会提示此次服务运行在哪个端口，共享的是哪个目录。
@@ -131,7 +145,7 @@ $ OneTiny -h                          # 打印帮助信息
 关闭cmd命令框即可。
 
 > 注意：
-> 1. 在 Linux 系统下，需要将可执行文件移动至 `/usr/bin` 下：
+> 1. 在 Linux 或 Mac 系统下，需要将可执行文件移动至 `/usr/bin` 下：
 >     ```bash
 >     mv ./OneTiny /usr/bin/tiny
 >     ```
