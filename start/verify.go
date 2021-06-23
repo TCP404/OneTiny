@@ -3,19 +3,24 @@ package start
 import (
 	"log"
 	"oneTiny/config"
-	"runtime"
 	"strconv"
 
 	"os"
 )
 
 func Verify() {
-	config.Goos = runtime.GOOS
 	iPort, _ := strconv.Atoi(config.Port)
 	verifyPort(iPort)
 	verifyPath(config.RootPath)
 }
 
+// verifyPort 负责校验用户指定的端口号是否在合法范围内。
+// 对于 unix 系列的操作系统，端口允许范围在 [1024,65535]；
+// 对于微软操作系统，端口允许范围在 [5001, 65535]；
+// 对于其他操作系统暂时不做验证；
+//
+// 参数:
+// 		iPort int: 用户指定的端口
 func verifyPort(iPort int) {
 	switch config.Goos {
 	case "linux", "darwin":
@@ -31,6 +36,10 @@ func verifyPort(iPort int) {
 	}
 }
 
+// verifyPath 负责校验用户指定的共享目录的绝对路径
+//
+// 参数:
+// 		rootPath string: 用户指定的共享目录绝对路径
 func verifyPath(rootPath string) {
 	if _, err := os.Stat(rootPath); err != nil {
 		if !os.IsExist(err) {
