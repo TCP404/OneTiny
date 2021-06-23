@@ -67,11 +67,11 @@ var back = map[uint8]string{
 //  8  不可见
 const (
 	DEFAULT   uint8 = 0 //  0  终端默认设置
-	HIGHLIGHT           //  1  高亮显示
+	HIGHLIGHT uint8 = 1 //  1  高亮显示
 	UNDERLINE uint8 = 4 //  4  使用下划线
-	BLINK               //  5  闪烁
+	BLINK     uint8 = 5 //  5  闪烁
 	REWHITE   uint8 = 7 //  7  反白显示
-	HIDDEN              //  8  不可见
+	HIDDEN    uint8 = 8 //  8  不可见
 )
 
 var style = map[uint8]string{
@@ -87,21 +87,40 @@ const (
 	end string = "\033[0m"
 )
 
-func GetF(f uint8) string {
-	begin := fmt.Sprintf("\033[%sm", front[f])
-	return begin
+func getF(f uint8) string {
+	return fmt.Sprintf("\033[%sm", front[f])
 }
 
-func GetFB(f, b uint8) string {
-	begin := fmt.Sprintf("\033[%s;%sm", front[f], back[b])
-	return begin
+func getFB(f, b uint8) string {
+	return fmt.Sprintf("\033[%s;%sm", front[f], back[b])
 }
 
-func GetSFB(s, f, b uint8) (begin string) {
-	begin = fmt.Sprintf("\033[%s;%s;%sm", style[s], front[f], back[b])
-	return
+func getSFB(s, f, b uint8) string {
+	return fmt.Sprintf("\033[%s;%s;%sm", style[s], front[f], back[b])
 }
 
-func GetEnd() string {
+func getEnd() string {
 	return end
+}
+
+// Renderf 渲染给定的字符串中，兼容字符串 format 规则，可以按照 printf 一样使用占位符、给定参数。
+//
+// 参数:
+// 		colors []uint8    : 颜色参数
+//		format string     : 格式化字符串，可包含占位符
+//		a      interface{}: 填充参数
+// 返回值:
+// 		string: 渲染完成的字符串，如：\033[1;31;40m被渲染字符串\033[0m
+func Renderf(colors []uint8, format string, a ...interface{}) string {
+	var begin string
+	switch len(colors) {
+	case 1:
+		begin = getF(colors[0])
+	case 2:
+		begin = getFB(colors[0], colors[1])
+	case 3:
+		begin = getSFB(colors[0], colors[1], colors[2])
+	default:
+	}
+	return begin + fmt.Sprintf(format, a...) + getEnd()
 }
