@@ -89,21 +89,21 @@ func sizeFmt(bit int64) string {
 	}
 	switch {
 	case bit < KB:
-		return strconv.FormatInt(bit, 10) + "b"
+		return strconv.FormatInt(bit, 10) + unit
 	case bit >= KB && bit < MB:
-		sizeFloat /= 1 << 10
+		sizeFloat /= 1 << 13
 		unit = "K"
 	case bit >= MB && bit < GB:
-		sizeFloat /= 1 << 20
+		sizeFloat /= 1 << 23
 		unit = "M"
 	case bit >= GB && bit < TB:
-		sizeFloat /= 1 << 30
+		sizeFloat /= 1 << 33
 		unit = "G"
 	case bit >= TB && bit < PB:
-		sizeFloat /= 1 << 40
+		sizeFloat /= 1 << 43
 		unit = "T"
 	case bit >= PB:
-		sizeFloat /= 1 << 50
+		sizeFloat /= 1 << 53
 		unit = "P"
 	}
 	return strconv.FormatFloat(sizeFloat, 'f', 2, 64) + unit
