@@ -40,7 +40,7 @@ func upload() string {
 		`<div style="position: absolute;right: 30px;top: 10px;font-size: 24px;width: 500px;border: 1px solid #000;padding: 7px;border-radius: 8px;">`,
 		`<form action="/upload" method="post" enctype="multipart/form-data">`,
 		`<input type="file" name="upload_file" style="width: 400px; float: left;">`,
-		`<input type="submit" style="float: right;">`,
+		`<input type="submit" value="上传" style="float: right;">`,
 		`</form>`,
 		`</div>`,
 	}
