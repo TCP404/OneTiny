@@ -1,39 +1,28 @@
 package controller
 
 import (
+	"io"
 	"io/fs"
 	"net/http"
 	"oneTiny/config"
 	"oneTiny/model"
 	"oneTiny/util"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"
+	"github.com/schollz/progressbar/v3"
 )
 
 func Handler(c *gin.Context) {
 	filePath := c.Param("filename")
-	if strings.HasSuffix(filePath, ".ico") { // 拦截浏览器默认请求 favicon.ico 的行为
-		return
-	}
-	config.CurrPath = filePath
-	if isDir(filePath) {
+	if c.GetBool("isDirectory") {
 		showFloder(c, filePath) // 如果是目录，就展示
 	} else {
 		download(c, filePath) // 如果是文件，就下载
 	}
-}
-
-// 判断是否是目录
-func isDir(filePath string) bool {
-	if filePath == config.ROOT {
-		return true
-	}
-	finfo, _ := os.Stat(path.Join(config.RootPath, filePath))
-	return finfo.IsDir()
 }
 
 // showFloder 会在文件类型为目录时调用，展示目录下所有文件
@@ -42,9 +31,9 @@ func isDir(filePath string) bool {
 //		c   *gin.Context: gin 上下文对象
 //		rel string: 用户点击的路径
 func showFloder(c *gin.Context, rel string) {
-	files := readDir(c, path.Join(config.RootPath, rel))
+	files := readDir(c, filepath.Join(config.RootPath, rel))
 	html := util.GenerateHTML(files, rel, config.IsAllowUpload)
-	c.Writer.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 	c.Writer.Write([]byte(html))
 }
 
@@ -54,17 +43,35 @@ func showFloder(c *gin.Context, rel string) {
 //		c   *gin.Context: gin 上下文对象
 //		rel string: 用户点击的路径
 func download(c *gin.Context, rel string) {
-	// c.Header("Content-Type", "application/octet-stream")
-	// c.Header("Content-Transfer-Encoding", "binary")
+	c.Status(http.StatusOK)
 	c.Header("Content-Disposition", "attachment; filename="+filepath.Base(rel))
-	c.Writer.WriteHeader(http.StatusOK)
-	c.File(path.Join(config.RootPath, rel))
+
+	fileAbsPath := filepath.Join(config.RootPath, rel)
+	src, err := os.Open(fileAbsPath)
+	if err != nil {
+		errorHandle(c, "获取文件失败！")
+	}
+	defer src.Close()
+
+	var contentLen int64
+	info, err := os.Stat(fileAbsPath)
+	if err != nil {
+		contentLen = -1
+	} else {
+		contentLen = info.Size()
+	}
+
+	// 使用下载进度条，当访问者点击下载时，共享者会有进度条提示
+	bar := progressbar.DefaultBytes(contentLen, color.GreenString("Downloading ")+color.BlueString(rel))
+	io.Copy(io.MultiWriter(c.Writer, bar), src)
+
+	// c.File(filepath.Join(config.RootPath, rel))
 }
 
 // readDir 读取目录下所有文件，将每个文件的相关信息存储在 model 中并返回
-// 
+//
 // 参数:
-//		c 		*gin.Context: gin 上下文对象
+//		c *gin.Context: gin 上下文对象
 // 		absPath string: 目录在系统中的绝对路径
 // 返回值:
 //		[]model.FileStruction: 目录下所有文件的相关信息的集合
@@ -80,12 +87,16 @@ func readDir(c *gin.Context, absPath string) []model.FileStruction {
 		info, _ := f.Info()
 		fType := f.Type()
 		size := info.Size()
+		abs := filepath.Join(absPath, f.Name())
+		rel := filepath.Join(relPath, f.Name())
 		if fType == fs.ModeDir { // 将目录的 size 设置为 0，文件则照常
 			size = 0
+			abs += config.SEPARATORS // 如果是目录，不在路径末尾加上分隔符的话，返回上一级会有问题
+			rel += config.SEPARATORS
 		}
 		files[i] = model.FileStruction{
-			Abs:  path.Join(absPath, f.Name()),
-			Rel:  path.Join(relPath, f.Name()),
+			Abs:  abs,
+			Rel:  rel,
 			Name: f.Name(),
 			Size: size,
 			Mode: fType,

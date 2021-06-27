@@ -56,12 +56,17 @@ OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前
 可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny)、[Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny.exe)，[Mac 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny_mac)，其他系统的同学请下载后自行编译。
 
 ### 下载
-**Linux**
+**Linux**、**Mac**：
 ```bash
-$ curl -LJO https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny
-$ chmod u+x ./OneTiny
-$ sudo cp OneTiny /usr/bin
+$ curl -LJ https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny -o onetiny
+$ chmod u+x ./onetiny             # 赋予执行权限
+$ cp onetiny /usr/bin             # 复制到可执行文件目录并修改可执行文件名称
 ```
+
+> Mac 用户注意:
+> 
+> 第一次打开会提示未验证开发者，可以打开 「访达」 ，打开文件所在目录，在 `onetiny` 文件处右键打开。
+> 之后就可以直接用命令行运行了。
 
 **Windows**
 
@@ -69,16 +74,10 @@ $ sudo cp OneTiny /usr/bin
 
 点击最新版本的 `OneTiny.exe` 进行下载
 
-**Mac**
+> Windows 用户注意：
+> 下载时可能会有损害计算机提示，点击 「仍然保留」 即可。
 
-```bash
-% curl -LJO https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny
-% chmod u+x OneTiny_mac             # 赋予执行权限
-% mv OneTiny_mac /usr/bin/OneTiny   # 移动到可执行文件目录并修改可执行文件名称
-```
-第一次打开会提示未验证开发者，可以打开“访达”，打开文件所在目录，在 `OneTiny` 文件处右键打开。
 
-之后就可以直接用命令行运行了。
 
 
 ### 安装（其他系统必选，Linux、Windows、MacOS 可选）
@@ -94,33 +93,49 @@ $ go build
 下载后双击 `OneTiny.exe` 即可运行（需管理员权限）。
 可以在CMD中切换到 `OneTiny.exe` 所在目录，执行以下任一命令：
 ```cmd
-> OneTiny                               # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，不允许上传
-> OneTiny.exe                           # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，不允许上传
-> OneTiny -p {指定端口}                  # 将运行在 http://本机局域网IP:指定端口，共享目录为当前工作目录，不允许上传
-> OneTiny -r {指定目录}                  # 将运行在 http://本机局域网IP:9090，共享目录为指定目录，不允许上传
+> OneTiny                               # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传
+> OneTiny.exe                           # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传
+> OneTiny -p {端口号}                    # 将运行在 http://本机局域网IP:端口号，共享目录为当前工作目录，禁止上传
+> OneTiny -r {共享目录绝对路径}            # 将运行在 http://本机局域网IP:9090，共享目录为指定目录，禁止上传
 > OneTiny -a [1|t|T|true|True|TRUE|空]  # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，允许上传
-> OneTiny -r {指定目录} -p {指定端口} -a  # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录，允许上传
-> OneTiny -h                           # 打印帮助信息
+> OneTiny -x {0～255}                   # 
+> OneTiny -h                            # 打印帮助信息
+> OneTiny help
+> OneTiny -v
+> OneTiny version
+
+> OneTiny -r=C:\Users\Boii -p=8192 -a -x=2 # 将运行在 「http://本机局域网IP:8192」，共享目录为 「C:\Users\Boii」 ，允许上传，允许访问共享目录往下2层
 ```
 
-**Linux**: 
+**Linux**、**Mac**:
 ```bash
-$ OneTiny                              # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，不允许上传
-$ OneTiny -p {指定端口}                 # 将运行在 http://本机局域网IP:指定端口，共享目录为当前工作目录，不允许上传
-$ OneTiny -r {指定目录}                 # 将运行在 http://本机局域网IP:9090，共享目录为指定目录，不允许上传
-$ OneTiny -a [1|t|T|true|True|TRUE|空] # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，允许上传
-$ OneTiny -r {指定目录} -p {指定端口}    # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录
-$ OneTiny -h                          # 打印帮助信息
+$ onetiny                              # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传
+$ onetiny -p {端口号}                   # 将运行在 http://本机局域网IP:端口号，共享目录为当前工作目录，禁止上传
+$ onetiny -r {共享目录绝对路径}           # 将运行在 http://本机局域网IP:9090，共享目录为指定工作目录，禁止上传
+$ onetiny -a [1|t|T|true|True|TRUE|空] # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，允许上传
+$ onetiny -x {0~255}                   # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传，默认仅允许访问共享目录一层，禁止进入下一层目录
+
+$ onetiny -h       # 打印帮助信息
+$ onetiny help
+$ onetiny -v       # 打印版本信息
+$ onetiny version
+
+$ onetiny -r=/home/boii -p=8192 -a -x=2      # 将运行在 「http://本机局域网IP:8192」，共享目录为 「/home/boii」，允许上传，允许访问共享目录往下2层
 ```
 
-**Mac**:
+
+**更多信息**:
 ```bash
-$ OneTiny                              # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，不允许上传
-$ OneTiny -p {指定端口}                 # 将运行在 http://本机局域网IP:指定端口，共享目录为当前工作目录，不允许上传
-$ OneTiny -r {指定目录}                 # 将运行在 http://本机局域网IP:9090，共享目录为指定目录，不允许上传
-$ OneTiny -a [1|t|T|true|True|TRUE|空] # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，允许上传
-$ OneTiny -r {指定目录} -p {指定端口}    # 将运行在 http://本机局域网IP:指定端口，共享目录为指定目录
-$ OneTiny -h                          # 打印帮助信息
+$ onetiny help
+OneTiny - 一个用于局域网内共享文件的FTP程序
+
+  Flags: 
+    -v --version   打印版本信息，当前版本: v0.2.2
+    -h --help      打印帮助信息
+    -r --road      指定对外开放的目录路径 (default: /home/boii)
+    -p --port      指定开放的端口 (default: 9090)
+    -a --allow     指定是否允许访问者上传
+    -x --max       指定允许访问的深度（默认仅限访问共享目录） (default: 0)
 ```
 
 ### 访问
@@ -152,42 +167,12 @@ $ OneTiny -h                          # 打印帮助信息
 >     才能像内置命令一样使用。可以改成你喜欢的名字。
 > 2. Windows 下载时可能会有损害计算机提示，点击仍然保留即可。
 
-
-
-## 程序说明
-
-首先获得一个 gin 实例，注册一个404路由处理 [404 错误](https://en.wikipedia.org/wiki/HTTP_404)
-
-然后再注册一个普通路由，使用通配符以便读取所有链接。
-
-因为是局域网内，且主要是我自己两台设备之间互传文件，所以就使用简单的 GET 请求。（此处可改进）。
-
-浏览器访问 `http://本机局域网IP:指定端口号` 时，将当前工作目录视为根目录，以链接形式展示根目录下所有文件及子目录;
-
-点击链接将重新发起新的请求，解析请求中的路径，判断是否为目录;
-
-- 是 -> 读取目录下所有文件及子目录，生成链接，返回给客户端
-- 否 -> 调用下载函数，将文件内容返回给客户端完成下载。
-
-```go
-func main() {
-	gin.SetMode(gin.ReleaseMode)
-
-	r := gin.Default()
-	r.NoRoute(controller.NotFound)
-	r.GET("/*filename", controller.Handler)
-
-	r.Run(":" + controller.Port)
-}
-```
-![程序流程图](README/Flowchart.png)
-
 ## TODO
 - [x] 上传功能
+- [x] 限定访问层级
+- [ ] 限定允许上传位置
 - [ ] 自动检查更新功能
 - [ ] 密码验证功能（防止局域网内监听）
 - [ ] 增加图形界面（使用 [fyne](https://fyne.io/)）
-- [ ] 限定访问层级
-- [ ] 限定允许上传位置
 - [ ] 大文件多线程下载
 - [ ] 断点续传
