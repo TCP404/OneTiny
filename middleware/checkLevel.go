@@ -11,7 +11,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-
+// CheckLevel 负责检查当前访问层级是否超出设定最大层级
+// 例如：
+// 		共享目录为 /a/b , 最大层级为 2
+//		✓: /a/b
+//		✓: /a/b/file
+// 		✓: /a/b/c
+// 		✓: /a/b/c/file
+//		✓: /a/b/c/d
+// 		✓: /a/b/c/d/file
+//		×: /a/b/c/d/e
+// 		×: /a/b/c/d/e/file
 func CheckLevel(c *gin.Context) {
 	filePath := c.Param("filename")
 	config.CurrPath = filePath

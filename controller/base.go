@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -10,10 +11,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"
-	"github.com/schollz/progressbar/v3"
+	pb "github.com/schollz/progressbar/v3"
 )
 
 func Handler(c *gin.Context) {
@@ -62,7 +64,21 @@ func download(c *gin.Context, rel string) {
 	}
 
 	// 使用下载进度条，当访问者点击下载时，共享者会有进度条提示
-	bar := progressbar.DefaultBytes(contentLen, color.GreenString("Downloading ")+color.BlueString(rel))
+	ops := []pb.Option{
+		pb.OptionSetDescription(color.GreenString("Downloading ") + color.BlueString(rel)),
+		pb.OptionSetWriter(config.Output),
+		pb.OptionShowBytes(true),
+		pb.OptionSetWidth(10),
+		pb.OptionThrottle(65 * time.Millisecond),
+		pb.OptionShowCount(),
+		pb.OptionOnCompletion(func() {
+			fmt.Fprint(config.Output, "\n")
+		}),
+		pb.OptionSpinnerType(14),
+		pb.OptionFullWidth(),
+	}
+
+	bar := pb.NewOptions64(contentLen, ops...)
 	io.Copy(io.MultiWriter(c.Writer, bar), src)
 
 	// c.File(filepath.Join(config.RootPath, rel))

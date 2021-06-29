@@ -14,8 +14,8 @@ import (
 // Start 函数负责启动 gin 实例，开始提供 HTTP 服务
 func Start() {
 	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default()
-
+	r := gin.New()
+	r.Use(gin.LoggerWithWriter(config.Output),gin.Recovery())
 	r.Use(middleware.InterceptICO)
 	r.Use(middleware.CheckLevel)
 
