@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"oneTiny/config"
-	"strconv"
 
 	"os"
 
@@ -12,8 +11,7 @@ import (
 )
 
 func Verify() {
-	iPort, _ := strconv.Atoi(config.Port)
-	if err := verifyPort(iPort); err != nil {
+	if err := verifyPort(config.Port); err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
@@ -29,18 +27,18 @@ func Verify() {
 // 对于其他操作系统暂时不做验证；
 //
 // 参数:
-// 		iPort int: 用户指定的端口
+// 		port int: 用户指定的端口
 // 返回值:
 // 		error: 错误信息
-func verifyPort(iPort int) error {
+func verifyPort(port int) error {
 	switch config.Goos {
 	case "linux", "darwin":
-		if !(iPort >= 1024 && iPort <= 65535) {
-			return errors.New(color.RedString("不可以设置系统预留端口 %d，您可以设置的范围在 [ 1024 ~ 65535 ] 之间。", iPort))
+		if !(port >= 1024 && port <= 65535) {
+			return errors.New(color.RedString("不可以设置系统预留端口 %d，您可以设置的范围在 [ 1024 ~ 65535 ] 之间。", port))
 		}
 	case "windows":
-		if !(iPort >= 5001 && iPort <= 65535) {
-			return errors.New(color.RedString("不可以设置系统预留端口 %d，您可以设置的范围在 [ 5001 ~ 65535 ] 之间。", iPort))
+		if !(port >= 5001 && port <= 65535) {
+			return errors.New(color.RedString("不可以设置系统预留端口 %d，您可以设置的范围在 [ 5001 ~ 65535 ] 之间。", port))
 		}
 	}
 	return nil

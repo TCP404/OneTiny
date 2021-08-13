@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	start.Run()
 	start.Verify()
-	start.Start()
+	start.StartGin()
 }
