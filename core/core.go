@@ -8,7 +8,7 @@ import (
 )
 
 func StartUpGin() *gin.Engine {
-	// gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	middleware.Setup(r)
 	routes.Setup(r)

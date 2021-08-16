@@ -20,5 +20,8 @@ func Set(c *cli.Context) error {
 	if c.IsSet("road") {
 		viper.Set("server.road", c.Path("road"))
 	}
+	if c.IsSet("secure") {
+		viper.Set("account.secure", c.Bool("secure"))
+	}
 	return viper.WriteConfig()
 }

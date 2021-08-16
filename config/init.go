@@ -91,10 +91,7 @@ func createCfgFile() {
 
 func setDefault() error {
 	viper.Set("server.port", 9090)
-	viper.Set("server.road", wd)
 	viper.Set("server.allow_upload", false)
 	viper.Set("server.max_level", 0)
-	viper.Set("account.default.user", util.MD5("admin"))
-	viper.Set("account.default.pass", util.MD5("admin"))
 	return viper.WriteConfig()
 }

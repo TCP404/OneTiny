@@ -20,7 +20,7 @@ func CheckLogin(c *gin.Context) {
 		c.Next()
 		return
 	} else {
-		c.Redirect(http.StatusMovedPermanently, "/login")
+		c.Redirect(http.StatusTemporaryRedirect, "/login")
 		return
 	}
 }

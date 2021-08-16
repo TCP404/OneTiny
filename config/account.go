@@ -25,11 +25,11 @@ func Register(c *cli.Context) (ups, error) {
 	var setSECU, setUSER, setPASS ups = 0, 0, 0
 
 	// 当填写了 -s 选项并且 -s 的值为 true 时才设置
-	if is, s := c.IsSet("secure"), c.Bool("secure"); is && s {
-		setSECU = SECU
-		viper.Set("account.secure", true)
-	} else if is && !s {
-		viper.Set("account.secure", false)
+	if is, s := c.IsSet("secure"), c.Bool("secure"); is {
+		if s {
+			setSECU = SECU
+		}
+		viper.Set("account.secure", s)
 	}
 	// 当填写了 -u 选项并且 -u 的值不为 空 时才设置
 	if is, u := c.IsSet("user"), c.String("user"); is && u != "" {

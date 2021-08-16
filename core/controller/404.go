@@ -9,4 +9,3 @@ import (
 func NotFound(c *gin.Context) {
 	c.String(http.StatusNotFound, "404 Page Not Found", nil)
 }
-

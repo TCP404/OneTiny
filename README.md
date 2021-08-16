@@ -57,12 +57,12 @@ OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前
 - CLI管理：[urfave/cli](https://github.com/urfave/cli/v2)
 
 ## 使用说明
-可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny)、[Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny.exe)，[Mac 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny_mac)，其他系统的同学请下载后自行编译。
+可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.3/OneTiny)、[Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.3/OneTiny.exe)，[Mac 版](https://github.com/TCP404/OneTiny/releases/download/v0.2.3/OneTiny_mac)，其他系统的同学请下载后自行编译。
 
 ### 下载
 **Linux**、**Mac**：
 ```bash
-$ curl -LJ https://github.com/TCP404/OneTiny/releases/download/v0.2.2/OneTiny -o onetiny
+$ curl -LJ https://github.com/TCP404/OneTiny/releases/download/v0.2.3/OneTiny -o onetiny
 $ chmod u+x ./onetiny             # 赋予执行权限
 $ cp onetiny /usr/bin             # 复制到可执行文件目录并修改可执行文件名称
 ```
