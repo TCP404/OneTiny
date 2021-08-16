@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	VERSION    string = "v0.2.3"
+	VERSION    string = "v0.3.0"
 	ROOT       string = "/"
 	SEPARATORS string = "/"
 )
