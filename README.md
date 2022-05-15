@@ -50,8 +50,6 @@ OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前
 但是这条命令在 Windows 上不可行，所以需要编写一个程序可以运行在 Windows 上实现同样的功能。
 
 ## 开发技术
-最近在学 [Golang](https://golang.org) 和 [gin](https://gin-gonic.com/zh-cn/) 框架，且 Golang 可以编译出不依赖于虚拟机的独立的可执行文件，也可以交叉编译，所以采用了 gin 做一个简单的局域网微型服务器。
-
 - 核心功能：[gin](https://gin-gonic.com/zh-cn/)
 - 配置管理：[viper](https://github.com/spf13/viper)
 - CLI管理：[urfave/cli](https://github.com/urfave/cli/v2)
