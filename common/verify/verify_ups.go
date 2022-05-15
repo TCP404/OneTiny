@@ -1,7 +1,8 @@
-package config
+package verify
 
 import (
-	"oneTiny/core/util"
+	"errors"
+	"oneTiny/common"
 
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
@@ -34,20 +35,22 @@ func Register(c *cli.Context) (ups, error) {
 	// 当填写了 -u 选项并且 -u 的值不为 空 时才设置
 	if is, u := c.IsSet("user"), c.String("user"); is && u != "" {
 		setUSER = USER
-		viper.Set("account.custom.user", util.MD5(u))
+		viper.Set("account.custom.user", common.MD5(u))
 	}
 	// 当填写了 -p 选项并且 -p 的值不为 空 时才设置
 	if is, p := c.IsSet("pass"), c.String("pass"); is && p != "" {
 		setPASS = PASS
-		viper.Set("account.custom.pass", util.MD5(p))
+		viper.Set("account.custom.pass", common.MD5(p))
 	}
 
 	weight := setSECU | setUSER | setPASS
-	if !checkUPS(weight) {
-		return weight, cli.Exit("设置失败~", 21)
+	if !verifyUPS(weight) {
+		return weight, errors.New("设置失败~")
 	}
-
-	return weight, viper.WriteConfig()
+	if err := viper.WriteConfig(); err != nil {
+		return weight, errors.New("配置文件写入失败～")
+	}
+	return weight, nil
 }
 
 // 检查UPS
@@ -64,37 +67,31 @@ func Register(c *cli.Context) (ups, error) {
 // 开启访问登录时，需配置文件中已设置帐号密码
 // 设置密码时，需配置文件中已设置账户
 // 设置账户时，需配置文件中已设置密码
-func checkUPS(weight ups) bool {
+func verifyUPS(weight ups) bool {
 	switch weight {
-	case USER | PASS | SECU: // 111 开启访问登录，并设置账户和密码
+	case USER | PASS | SECU:
+		// 111 开启访问登录，并设置账户和密码
 		return true
-	case USER | PASS: // 110 设置账户和密码
+	case USER | PASS:
+		// 110 设置账户和密码
 		return true
-
-	case USER | SECU: // 101 开启访问登录，并设置用户名，穿透下去检查是否有密码
+	case USER | SECU:
+		// 101 开启访问登录，并设置用户名，穿透下去检查是否有密码
 		fallthrough
-	case USER: // 100 设置用户名，需配置文件中有密码
-		if viper.GetString("account.custom.pass") != "" {
-			return true
-		} else {
-			return false
-		}
-	case PASS | SECU: // 011 开启访问登录，并设置密码，穿透下去检查是否有帐户名
+	case USER:
+		// 100 设置用户名，需配置文件中有密码
+		return viper.GetString("account.custom.pass") != ""
+	case PASS | SECU:
+		// 011 开启访问登录，并设置密码，穿透下去检查是否有帐户名
 		fallthrough
-	case PASS: // 010 设置密码，需配置文件中有账户名
-		if viper.GetString("account.custom.user") != "" {
-			return true
-		} else {
-
-			return false
-		}
-	case SECU: // 001 开启访问登录
-		if viper.GetString("account.custom.user") != "" && viper.GetString("account.custom.pass") != "" {
-			return true
-		} else {
-			return false
-		}
-	case 0: // 000 打印当前是否开启访问登录
+	case PASS:
+		// 010 设置密码，需配置文件中有账户名
+		return viper.GetString("account.custom.user") != ""
+	case SECU:
+		// 001 开启访问登录
+		return viper.GetString("account.custom.user") != "" && viper.GetString("account.custom.pass") != ""
+	case 0:
+		// 000 打印当前是否开启访问登录
 		return true
 	default:
 		return false

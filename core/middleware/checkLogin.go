@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"net/http"
-	"oneTiny/config"
+	"oneTiny/common/config"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"

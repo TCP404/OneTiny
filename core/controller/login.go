@@ -2,7 +2,8 @@ package controller
 
 import (
 	"net/http"
-	"oneTiny/config"
+	"oneTiny/common"
+	"oneTiny/common/config"
 	"oneTiny/core/util"
 
 	"github.com/gin-contrib/sessions"
@@ -22,8 +23,8 @@ func LoginPost(c *gin.Context) {
 	// 检查帐号密码
 	// 通过则生成session，跳转首页
 	// 不通过则返回登录页
-	if util.MD5(c.PostForm("username")) == viper.Get("account.custom.user") &&
-		util.MD5(c.PostForm("password")) == viper.Get("account.custom.pass") {
+	if common.MD5(c.PostForm("username")) == viper.Get("account.custom.user") &&
+		common.MD5(c.PostForm("password")) == viper.Get("account.custom.pass") {
 		session := sessions.Default(c)
 		session.Set("login", config.SessionVal)
 		session.Save()

@@ -3,7 +3,6 @@ package util
 import (
 	"fmt"
 	"oneTiny/core/model"
-	"strconv"
 	"strings"
 )
 
@@ -58,8 +57,8 @@ func fileList(files []model.FileStruction) string {
 	for i, f := range files {
 		link := ""
 		trHead := "<tr>"
-		fileLink := fmt.Sprintf("<td>%d. <a href='%s'> %s </a></td>", i, f.Rel, f.Name)
-		fileSize := fmt.Sprintf("<td style='text-align:right'>%s</td>", sizeFmt(f.Size))
+		fileLink := fmt.Sprintf("<td>%d. <a href='%s'> %s </a></td>", i, f.URLRelPath, f.Name)
+		fileSize := fmt.Sprintf("<td style='text-align:right'>%s</td>", f.Size)
 		trTail := "</tr>"
 		link = trHead + fileLink + fileSize + trTail
 		tBody += link
@@ -67,49 +66,6 @@ func fileList(files []model.FileStruction) string {
 	tBody += `</tbody>`
 	tableTail := `</table>`
 	return tableHead + tHead + tBody + tableTail
-}
-
-// sizeFmt 格式化给定的文件大小，如果文件类型为目录，则返回 "-"
-//
-// 参数：
-//		bit int64: 文件大小的比特数
-// 返回值：
-// 		string: 格式化后的文件大小，单位 KByte、MByte、GByte、TByte、PByte
-func sizeFmt(bit int64) string {
-	const (
-		_        = iota
-		KB int64 = 1 << (10*iota + 3)
-		MB
-		GB
-		TB
-		PB
-	)
-	sizeFloat := float64(bit)
-	size := "-"
-	unit := "b"
-	if bit == 0 {
-		return size
-	}
-	switch {
-	case bit < KB:
-		return strconv.FormatInt(bit, 10) + unit
-	case bit >= KB && bit < MB:
-		sizeFloat /= 1 << 13
-		unit = "K"
-	case bit >= MB && bit < GB:
-		sizeFloat /= 1 << 23
-		unit = "M"
-	case bit >= GB && bit < TB:
-		sizeFloat /= 1 << 33
-		unit = "G"
-	case bit >= TB && bit < PB:
-		sizeFloat /= 1 << 43
-		unit = "T"
-	case bit >= PB:
-		sizeFloat /= 1 << 53
-		unit = "P"
-	}
-	return strconv.FormatFloat(sizeFloat, 'f', 2, 64) + unit
 }
 
 func GenerateLoginHTML() string {

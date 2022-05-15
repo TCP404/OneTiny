@@ -2,7 +2,8 @@ package middleware
 
 import (
 	"net/http"
-	"oneTiny/config"
+	"oneTiny/common/config"
+	"oneTiny/common/define"
 	"os"
 	"path"
 	"path/filepath"
@@ -38,7 +39,7 @@ func CheckLevel(c *gin.Context) {
 
 // 判断是否是目录
 func isDir(filePath string) bool {
-	if filePath == config.ROOT {
+	if filePath == define.ROOT {
 		return true
 	}
 	finfo, _ := os.Stat(path.Join(config.RootPath, filePath))
@@ -48,7 +49,7 @@ func isDir(filePath string) bool {
 // 检查当前访问的路径是否超过限定层级
 func isOverLevel(relPath string, isFile bool) bool {
 	rel, _ := filepath.Rel(config.RootPath, filepath.Join(config.RootPath, relPath))
-	i := strings.Split(rel, config.SEPARATORS)
+	i := strings.Split(rel, define.SEPARATORS)
 	level := len(i)
 	if i[0] == "." {
 		level = 0

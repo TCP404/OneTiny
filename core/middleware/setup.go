@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"oneTiny/config"
+	"oneTiny/common/config"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"

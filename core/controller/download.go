@@ -1,20 +1,21 @@
 package controller
 
 import (
-	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
-	"oneTiny/config"
+	"oneTiny/common"
+	"oneTiny/common/config"
+	"oneTiny/common/define"
 	"oneTiny/core/model"
 	"oneTiny/core/util"
 	"os"
+	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	pb "github.com/schollz/progressbar/v3"
 )
 
 func Downloader(c *gin.Context) {
@@ -54,32 +55,15 @@ func download(c *gin.Context, rel string) {
 	}
 	defer src.Close()
 
-	var contentLen int64
+	var contentLen int64 = -1
 	info, err := os.Stat(fileAbsPath)
-	if err != nil {
-		contentLen = -1
-	} else {
+	if err == nil {
 		contentLen = info.Size()
 	}
+	c.Header("Content-Length", strconv.Itoa(int(contentLen)))
 
-	// 使用下载进度条，当访问者点击下载时，共享者会有进度条提示
-	ops := []pb.Option{
-		pb.OptionSetDescription("[green]Downloading[reset] [blue]" + rel + "[reset]"),
-		pb.OptionSetWidth(10),
-		pb.OptionThrottle(65 * time.Millisecond),
-		pb.OptionShowCount(),
-		pb.OptionOnCompletion(func() { fmt.Fprint(config.Output, "\n") }),
-		pb.OptionSpinnerType(14),
-		pb.OptionFullWidth(),
-		pb.OptionSetWriter(config.Output),
-		pb.OptionEnableColorCodes(true),
-		pb.OptionShowBytes(true),
-		pb.OptionSetWidth(50),
-	}
-
-	bar := pb.NewOptions64(contentLen, ops...)
 	buf := make([]byte, 32*1024) // 32kb
-	io.CopyBuffer(io.MultiWriter(c.Writer, bar), src, buf)
+	io.CopyBuffer(io.MultiWriter(c.Writer, util.GetBar(rel, contentLen)), src, buf)
 
 	// c.File(filepath.Join(config.RootPath, rel))
 }
@@ -97,25 +81,28 @@ func readDir(c *gin.Context, absPath string) []model.FileStruction {
 		errorHandle(c, "目录读取失败！")
 		return nil
 	}
+
 	relPath := strings.TrimPrefix(absPath, config.RootPath)
 	files := make([]model.FileStruction, len(dirEntries))
+
 	for i, f := range dirEntries {
 		info, _ := f.Info()
-		fType := f.Type()
 		size := info.Size()
-		abs := filepath.Join(absPath, f.Name())
-		rel := filepath.Join("/file", relPath, f.Name())
+
+		deviceAbsPath := filepath.Join(absPath, f.Name())
+		urlRelPath := path.Join("/file", relPath, f.Name())
+		fType := f.Type()
 		if fType == fs.ModeDir { // 将目录的 size 设置为 0，文件则照常
 			size = 0
-			abs += config.SEPARATORS // 如果是目录，不在路径末尾加上分隔符的话，返回上一级会有问题
-			rel += config.SEPARATORS
+			deviceAbsPath += define.SEPARATORS // 如果是目录，不在路径末尾加上分隔符的话，返回上一级会有问题
+			urlRelPath += define.SEPARATORS
 		}
 		files[i] = model.FileStruction{
-			Abs:  abs,
-			Rel:  rel,
-			Name: f.Name(),
-			Size: size,
-			Mode: fType,
+			DeviceAbsPath: deviceAbsPath,
+			URLRelPath:    urlRelPath,
+			Name:          f.Name(),
+			Size:          common.SizeFmt(size),
+			Mode:          fType,
 		}
 	}
 	return files

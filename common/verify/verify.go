@@ -1,24 +1,21 @@
-package start
+package verify
 
 import (
 	"errors"
-	"log"
-	"oneTiny/config"
-
+	"oneTiny/common/config"
 	"os"
 
 	"github.com/fatih/color"
 )
 
-func Verify() {
-	if err := verifyPort(config.Port); err != nil {
-		log.Println(err)
-		os.Exit(1)
+func Verify() (err error) {
+	if err = verifyPort(config.Port); err != nil {
+		return err
 	}
-	if err := verifyPath(config.RootPath); err != nil {
-		log.Println(err)
-		os.Exit(1)
+	if err = verifyPath(config.RootPath); err != nil {
+		return err
 	}
+	return nil
 }
 
 // verifyPort 负责校验用户指定的端口号是否在合法范围内。
