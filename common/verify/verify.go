@@ -28,7 +28,7 @@ func Verify() (err error) {
 // 返回值:
 // 		error: 错误信息
 func verifyPort(port int) error {
-	switch config.Goos {
+	switch config.OS {
 	case "linux", "darwin":
 		if !(port >= 1024 && port <= 65535) {
 			return errors.New(color.RedString("不可以设置系统预留端口 %d，您可以设置的范围在 [ 1024 ~ 65535 ] 之间。", port))

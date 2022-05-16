@@ -4,10 +4,13 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"strconv"
 	"time"
+
+	"github.com/parnurzeal/gorequest"
 )
 
 func RandString(n int) string {
@@ -119,4 +122,16 @@ func SizeFmt(bit int64) string {
 		unit = "Pb"
 	}
 	return strconv.FormatFloat(sizeFloat, 'f', 2, 64) + unit
+}
+
+func DownloadBinary(url, path string) []error {
+	_, body, errs := gorequest.New().Get(url).EndBytes()
+	if len(errs) != 0 {
+		return errs
+	}
+	err := ioutil.WriteFile(path, body, 0755)
+	if err != nil {
+		return []error{err}
+	}
+	return nil
 }

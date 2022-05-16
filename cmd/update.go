@@ -1,6 +1,21 @@
 package cmd
 
-import "github.com/urfave/cli/v2"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"oneTiny/common"
+	"oneTiny/common/config"
+	"oneTiny/common/define"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/fatih/color"
+	"github.com/parnurzeal/gorequest"
+
+	"github.com/urfave/cli/v2"
+)
 
 var updateCmd = newUpdateCmd()
 
@@ -17,6 +32,176 @@ func newUpdateCmd() *cli.Command {
 				Required:    false,
 				DefaultText: "false",
 			},
+			&cli.StringFlag{
+				Name:     "use",
+				Usage:    "指定版本号",
+				Required: false,
+			},
+		},
+		Action: func(c *cli.Context) error {
+			var u = &update{currVerion: splitVersion(define.VERSION)}
+			err := u.updateAction(c)
+			if err != nil {
+				return cli.Exit(err.Error(), 31)
+			}
+			return cli.Exit(u.msg, 0)
 		},
 	}
+}
+
+type update struct {
+	currVerion []string
+	msg        string
+}
+
+func (u *update) updateAction(c *cli.Context) error {
+	switch {
+	case c.IsSet("list"):
+		return u.updateList()
+	case c.IsSet("use"):
+		return u.updateVersion(c.String("use"))
+	}
+	return u.updateLastest()
+}
+
+func (u *update) updateList() error {
+	tags, err := getVersionList()
+	if err != nil {
+		return err
+	}
+	for _, tag := range tags {
+		fmt.Println(color.GreenString("%v", tag.TagName))
+	}
+	return nil
+}
+
+func (u *update) updateVersion(version string) error {
+	if err := checkVersion(version); err != nil {
+		return err
+	}
+
+	req := gorequest.New()
+	_, body, errs := req.Get(define.VersionByTagURL + version).End()
+	if len(errs) != 0 {
+		return errors.New("网络抖动了一下～请重试")
+	}
+	var versionInfo = new(releaseInfo)
+	err := json.Unmarshal([]byte(body), versionInfo)
+	if err != nil {
+		return errors.New("网络抖动了一下～请重试")
+	}
+
+	// 检查当前系统是 linux 还是 mac 还是 windows决定 Assets 用哪个,然后进行下载
+	name, ok := define.ReleaseName[config.OS]
+	if !ok {
+		u.msg = color.YellowString("暂时没有适合您的系统的版本，请自行下载编译")
+		return nil
+	}
+	var (
+		assert *releaseAsset
+		l      = len(versionInfo.Assets)
+	)
+	for i := 0; i < l; i++ {
+		if versionInfo.Assets[i].Name == name {
+			assert = &versionInfo.Assets[i]
+			break
+		}
+	}
+	if assert == nil {
+		u.msg = color.YellowString("暂时没有适合您的系统的版本，请自行下载编译")
+		return nil
+	}
+
+	// 进行下载
+	p, err := os.UserHomeDir()
+	if err != nil {
+		u.msg = color.HiYellowString("获取 Home 目录失败")
+		p = config.Pwd
+	}
+	path := filepath.Join(p, assert.Name)
+	errs = common.DownloadBinary(assert.DownloadURL, path)
+	if len(errs) != 0 {
+		return errors.New("网络抖动了一下～请重试")
+	}
+	u.msg += color.HiGreenString("更新完成～, 文件存放于: %s", path)
+	return nil
+}
+
+func (u *update) updateLastest() error {
+	// 获取当前最新版本
+	req := gorequest.New()
+	_, body, errs := req.Get(define.VersionLatestURL).End()
+	if len(errs) != 0 {
+		return errors.New("网络抖动了一下～请重试")
+	}
+
+	var latestInfo = new(releaseInfo)
+	err := json.Unmarshal([]byte(body), latestInfo)
+	if err != nil {
+		return errors.New("网络抖动了一下～请重试")
+	}
+
+	// 检查最新版本与当前版本
+	latestVersion := splitVersion(latestInfo.TagName)
+	if u.isLastest(latestVersion) {
+		u.msg = color.GreenString("当前已是最新版本~")
+		return nil
+	}
+	// 进行更新
+	return u.updateVersion(latestInfo.TagName)
+}
+
+func (u *update) isLastest(version []string) bool {
+	max := len(version)
+	if max > len(u.currVerion) {
+		max = len(u.currVerion)
+	}
+
+	for i := 0; i < max; i++ {
+		if version[i] < u.currVerion[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func splitVersion(version string) (v []string) {
+	var major, minor, revision = "0", "0", "0"
+	sArr := strings.Split(strings.TrimLeft(version, "v"), ".")
+	if len(sArr) >= 3 {
+		revision = sArr[2]
+	}
+	if len(sArr) >= 2 {
+		minor = sArr[1]
+	}
+	if len(sArr) >= 1 {
+		major = sArr[0]
+	}
+	return append(v, major, minor, revision)
+}
+
+func getVersionList() ([]tagList, error) {
+	_, body, errs := gorequest.New().Set("Accept", "application/vnd.github.v3+json").Get(define.VersionListURL).End()
+	if len(errs) != 0 {
+		return nil, errors.New("网络抖动了一下～请重试")
+	}
+	var tags []tagList
+	err := json.Unmarshal([]byte(body), &tags)
+	if err != nil {
+		return nil, errors.New("网络抖动了一下～请重试")
+	}
+	return tags, nil
+}
+
+func checkVersion(version string) error {
+	tags, err := getVersionList()
+	if err != nil {
+		return err
+	}
+	for _, tag := range tags {
+		if strings.Compare(tag.TagName, version) == 0 {
+			return nil
+		}
+	}
+	return errors.New("找不到您指定的版本，请检查您输入的版本号")
 }
