@@ -19,8 +19,9 @@ import (
 var (
 	Output     io.Writer = os.Stderr
 	SessionVal string    = common.RandString(64)
-	Goos       string    = runtime.GOOS // 程序所在的操作系统，默认值 linux
+	OS         string    = runtime.GOOS // 程序所在的操作系统，默认值 linux
 	IP         string    = define.IP    // 本机局域网IP
+	Pwd        string    = "/"
 
 	// 各个参数的原厂默认值
 	RootPath      string = define.RootPath      // 共享目录的根路径，默认值：当前目录
@@ -51,10 +52,12 @@ func LoadConfig() error {
 
 	RootPath = viper.GetString("server.road")
 	if len(RootPath) < 1 {
-		RootPath, err = os.Getwd()
+		wd, err := os.Getwd()
 		if err != nil {
 			return errors.New("获取不到共享路径")
 		}
+		RootPath = wd
+		Pwd = wd
 	}
 
 	MaxLevel = uint8(viper.GetInt("server.max_level"))
@@ -62,7 +65,7 @@ func LoadConfig() error {
 	IsAllowUpload = viper.GetBool("server.allow_upload")
 	IsSecure = viper.GetBool("account.secure")
 
-	if Goos == "windows" {
+	if OS == "windows" {
 		Output = color.Output
 	}
 	return nil

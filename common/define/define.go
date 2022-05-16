@@ -1,7 +1,7 @@
 package define
 
 const (
-	VERSION    string = "v0.3.0"
+	VERSION    string = "v0.4.0"
 	ROOT       string = "/"
 	SEPARATORS string = "/"
 )
@@ -15,4 +15,18 @@ const (
 	Username      string = "admin"     // 访问登录的帐号
 	Password      string = "admin"     // 访问登录的密码
 	IP            string = "127.0.0.1" // 本机局域网IP
+)
+
+const (
+	VersionListURL   = "https://api.github.com/repos/TCP404/OneTiny/tags"
+	VersionLatestURL = "https://api.github.com/repos/TCP404/OneTiny/releases/latest"
+	VersionByTagURL  = "https://api.github.com/repos/TCP404/OneTiny/releases/tags/"
+)
+
+var (
+	ReleaseName = map[string]string{
+		"linux":   "OneTiny",
+		"windows": "OneTiny.exe",
+		"darwin":  "OneTiny_mac",
+	}
 )

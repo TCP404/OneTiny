@@ -1,5 +1,5 @@
 GOBUILD=go build
-BINARY_NAME=onetiny
+BINARY_NAME=OneTiny
 
 MAC_EXE=./exe/$(BINARY_NAME)_mac
 LINUX_EXE=./exe/$(BINARY_NAME)
