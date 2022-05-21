@@ -17,6 +17,7 @@ package cmd
 //  │   ├── -p
 //  │   └── -s
 //  └── update
+//      ├── --use
 //      └── -l
 
 import (
