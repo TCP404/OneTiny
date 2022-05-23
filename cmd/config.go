@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/fatih/color"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
@@ -15,7 +18,7 @@ func newConfigCmd() *cli.Command {
 		Usage:       "设置默认配置",
 		UsageText:   "onetiny config [OPTIONS]",
 		Description: "使用 onetiny config 命令可以将设置写入配置文件。\n使用方式与 onetiny 命令相同，仅多了一个 config 关键字，如：\n  onetiny config -p 10240  可以将端口设置为 10240 写入配置\n  onetiny config -a false  可以设置不允许访问者上传并写入配置",
-		Flags:        newGlobalFlag(),
+		Flags:       newGlobalFlag(),
 		Action: func(c *cli.Context) error {
 			if err := configAction(c); err != nil {
 				return cli.Exit(err.Error(), 11)
@@ -38,7 +41,12 @@ func configAction(c *cli.Context) error {
 		viper.Set("server.max_level", c.Int("max"))
 	}
 	if c.IsSet("road") {
-		viper.Set("server.road", c.Path("road"))
+		p := c.Path("road")
+		if p[0] == '.' {
+			curr, _ := os.Getwd()
+			p = filepath.Join(curr, p)
+		}
+		viper.Set("server.road", p)
 	}
 	if c.IsSet("secure") {
 		viper.Set("account.secure", c.Bool("secure"))

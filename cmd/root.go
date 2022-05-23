@@ -23,9 +23,12 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"oneTiny/common/define"
-	"oneTiny/common/config"
 	"os"
+	"path/filepath"
+
+	"github.com/TCP404/OneTiny-cli/config"
+
+	"github.com/TCP404/OneTiny-cli/common/define"
 
 	"github.com/urfave/cli/v2"
 )
@@ -52,8 +55,8 @@ func initCLI() {
 	cli.ErrWriter = config.Output
 }
 
-// RunCLI 函数作为程序入口，主要负责处理命令和 flag
-func RunCLI() *cli.App {
+// CLI 函数作为程序入口，主要负责处理命令和 flag
+func CLI() *cli.App {
 	initCLI()
 
 	return &cli.App{
@@ -61,7 +64,7 @@ func RunCLI() *cli.App {
 		Usage:           "一个用于局域网内共享文件的FTP程序",
 		UsageText:       "onetiny [GLOBAL OPTIONS] COMMAND [COMMAND OPTIONS] [参数...]",
 		Version:         define.VERSION,
-		Flags:            newGlobalFlag(),
+		Flags:           newGlobalFlag(),
 		Authors:         []*cli.Author{{Name: "Boii", Email: "i@tcp404.com"}},
 		Commands:        []*cli.Command{updateCmd, configCmd, secureCmd},
 		CommandNotFound: func(c *cli.Context, s string) { cli.ShowAppHelpAndExit(c, 10) },
@@ -69,12 +72,18 @@ func RunCLI() *cli.App {
 		ErrWriter:       config.Output,
 		Action: func(c *cli.Context) error {
 			config.Port = c.Int("port")
-			config.RootPath = c.String("road")
 			config.MaxLevel = uint8(c.Int("max"))
 			config.IsAllowUpload = c.Bool("allow")
 			config.IsSecure = c.Bool("secure")
+			if c.IsSet("road") {
+				p := c.Path("road")
+				if p[0] == '.' {
+					curr, _ := os.Getwd()
+					p = filepath.Join(curr, p)
+				}
+				config.RootPath = p
+			}
 			return nil
 		},
 	}
-
 }

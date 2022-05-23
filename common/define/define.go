@@ -8,7 +8,7 @@ const (
 
 const (
 	MaxLevel      uint8  = 0           // 允许访问的最大层级，默认值  0
-	Port          int    = 9090        // 指定的服务端口，默认值 9090
+	Port          int    = 8192        // 指定的服务端口，默认值 8192
 	IsAllowUpload bool   = false       // 是否允许上传，默认值：否
 	IsSecure      bool   = false       // 是否开启访问登录，默认值：否
 	RootPath      string = "/"         // 共享目录的根路径，默认值：当前目录
@@ -29,4 +29,22 @@ var (
 		"windows": "OneTiny.exe",
 		"darwin":  "OneTiny_mac",
 	}
+)
+
+const (
+	B  = 8
+	KB = B << (10 * iota)
+	MB
+	GB
+	TB
+	PB
+)
+
+const (
+	b  = 1
+	Kb = b << (10 * iota)
+	Mb
+	Gb
+	Tb
+	Pb
 )

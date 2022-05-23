@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"oneTiny/common"
-	"oneTiny/common/config"
-	"oneTiny/common/define"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/TCP404/OneTiny-cli/common/define"
+	"github.com/TCP404/OneTiny-cli/config"
+	"github.com/TCP404/OneTiny-cli/internal/model"
+
+	"github.com/TCP404/eutil"
 	"github.com/fatih/color"
 	"github.com/parnurzeal/gorequest"
 
@@ -39,7 +41,7 @@ func newUpdateCmd() *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			var u = &update{currVerion: splitVersion(define.VERSION)}
+			var u = &update{currVersion: splitVersion(define.VERSION)}
 			err := u.updateAction(c)
 			if err != nil {
 				return cli.Exit(err.Error(), 31)
@@ -50,8 +52,8 @@ func newUpdateCmd() *cli.Command {
 }
 
 type update struct {
-	currVerion []string
-	msg        string
+	currVersion []string
+	msg         string
 }
 
 func (u *update) updateAction(c *cli.Context) error {
@@ -61,7 +63,7 @@ func (u *update) updateAction(c *cli.Context) error {
 	case c.IsSet("use"):
 		return u.updateVersion(c.String("use"))
 	}
-	return u.updateLastest()
+	return u.updateLatest()
 }
 
 func (u *update) updateList() error {
@@ -85,7 +87,7 @@ func (u *update) updateVersion(version string) error {
 	if len(errs) != 0 {
 		return errors.New("网络抖动了一下～请重试")
 	}
-	var versionInfo = new(releaseInfo)
+	var versionInfo = new(model.ReleaseInfo)
 	err := json.Unmarshal([]byte(body), versionInfo)
 	if err != nil {
 		return errors.New("网络抖动了一下～请重试")
@@ -98,7 +100,7 @@ func (u *update) updateVersion(version string) error {
 		return nil
 	}
 	var (
-		assert *releaseAsset
+		assert *model.ReleaseAsset
 		l      = len(versionInfo.Assets)
 	)
 	for i := 0; i < l; i++ {
@@ -119,7 +121,7 @@ func (u *update) updateVersion(version string) error {
 		p = config.Pwd
 	}
 	path := filepath.Join(p, assert.Name)
-	errs = common.DownloadBinary(assert.DownloadURL, path)
+	errs = eutil.DownloadBinary(assert.DownloadURL, path)
 	if len(errs) != 0 {
 		return errors.New("网络抖动了一下～请重试")
 	}
@@ -127,7 +129,7 @@ func (u *update) updateVersion(version string) error {
 	return nil
 }
 
-func (u *update) updateLastest() error {
+func (u *update) updateLatest() error {
 	// 获取当前最新版本
 	req := gorequest.New()
 	_, body, errs := req.Get(define.VersionLatestURL).End()
@@ -135,7 +137,7 @@ func (u *update) updateLastest() error {
 		return errors.New("网络抖动了一下～请重试")
 	}
 
-	var latestInfo = new(releaseInfo)
+	var latestInfo = new(model.ReleaseInfo)
 	err := json.Unmarshal([]byte(body), latestInfo)
 	if err != nil {
 		return errors.New("网络抖动了一下～请重试")
@@ -143,7 +145,7 @@ func (u *update) updateLastest() error {
 
 	// 检查最新版本与当前版本
 	latestVersion := splitVersion(latestInfo.TagName)
-	if u.isLastest(latestVersion) {
+	if u.isLatest(latestVersion) {
 		u.msg = color.GreenString("当前已是最新版本~")
 		return nil
 	}
@@ -151,14 +153,14 @@ func (u *update) updateLastest() error {
 	return u.updateVersion(latestInfo.TagName)
 }
 
-func (u *update) isLastest(version []string) bool {
+func (u *update) isLatest(version []string) bool {
 	max := len(version)
-	if max > len(u.currVerion) {
-		max = len(u.currVerion)
+	if max > len(u.currVersion) {
+		max = len(u.currVersion)
 	}
 
 	for i := 0; i < max; i++ {
-		if version[i] < u.currVerion[i] {
+		if version[i] < u.currVersion[i] {
 			return false
 		}
 	}
@@ -180,12 +182,12 @@ func splitVersion(version string) (v []string) {
 	return append(v, major, minor, revision)
 }
 
-func getVersionList() ([]tagList, error) {
+func getVersionList() ([]model.TagList, error) {
 	_, body, errs := gorequest.New().Set("Accept", "application/vnd.github.v3+json").Get(define.VersionListURL).End()
 	if len(errs) != 0 {
 		return nil, errors.New("网络抖动了一下～请重试")
 	}
-	var tags []tagList
+	var tags []model.TagList
 	err := json.Unmarshal([]byte(body), &tags)
 	if err != nil {
 		return nil, errors.New("网络抖动了一下～请重试")

@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"oneTiny/common/config"
 	"strconv"
+
+	"github.com/TCP404/OneTiny-cli/config"
 
 	"github.com/urfave/cli/v2"
 )

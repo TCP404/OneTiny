@@ -2,12 +2,12 @@ package main
 
 import (
 	"log"
-	"oneTiny/cmd"
-	"oneTiny/common/config"
-	"oneTiny/common/verify"
-	"oneTiny/core"
 	"os"
 
+	"github.com/TCP404/OneTiny-cli/cmd"
+	"github.com/TCP404/OneTiny-cli/config"
+	"github.com/TCP404/OneTiny-cli/core"
+	"github.com/TCP404/OneTiny-cli/external"
 	"github.com/fatih/color"
 )
 
@@ -22,10 +22,14 @@ func main() {
 	if err = config.LoadConfig(); err != nil {
 		return
 	}
-	if err = cmd.RunCLI().Run(os.Args); err != nil {
+	if err = cmd.CLI().Run(os.Args); err != nil {
 		return
 	}
-	if err = verify.Verify(); err != nil {
+	coreClient := external.Core
+	if err = coreClient.NewVerifyChain().
+		AddToHead(coreClient.NewPortHandler(config.Port)).
+		AddToHead(coreClient.NewPathHandler(config.RootPath)).
+		Iterator(); err != nil {
 		return
 	}
 
