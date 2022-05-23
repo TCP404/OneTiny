@@ -2,12 +2,13 @@ package middleware
 
 import (
 	"net/http"
-	"oneTiny/common/config"
-	"oneTiny/common/define"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/TCP404/OneTiny-cli/common/config"
+	"github.com/TCP404/OneTiny-cli/common/define"
 
 	"github.com/gin-gonic/gin"
 )

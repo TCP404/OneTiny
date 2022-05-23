@@ -23,9 +23,10 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"oneTiny/common/define"
-	"oneTiny/common/config"
 	"os"
+
+	"github.com/TCP404/OneTiny-cli/common/config"
+	"github.com/TCP404/OneTiny-cli/common/define"
 
 	"github.com/urfave/cli/v2"
 )
@@ -52,8 +53,8 @@ func initCLI() {
 	cli.ErrWriter = config.Output
 }
 
-// RunCLI 函数作为程序入口，主要负责处理命令和 flag
-func RunCLI() *cli.App {
+// CLI 函数作为程序入口，主要负责处理命令和 flag
+func CLI() *cli.App {
 	initCLI()
 
 	return &cli.App{
@@ -61,7 +62,7 @@ func RunCLI() *cli.App {
 		Usage:           "一个用于局域网内共享文件的FTP程序",
 		UsageText:       "onetiny [GLOBAL OPTIONS] COMMAND [COMMAND OPTIONS] [参数...]",
 		Version:         define.VERSION,
-		Flags:            newGlobalFlag(),
+		Flags:           newGlobalFlag(),
 		Authors:         []*cli.Author{{Name: "Boii", Email: "i@tcp404.com"}},
 		Commands:        []*cli.Command{updateCmd, configCmd, secureCmd},
 		CommandNotFound: func(c *cli.Context, s string) { cli.ShowAppHelpAndExit(c, 10) },
@@ -76,5 +77,4 @@ func RunCLI() *cli.App {
 			return nil
 		},
 	}
-
 }

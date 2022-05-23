@@ -2,8 +2,9 @@ package util
 
 import (
 	"fmt"
-	"oneTiny/core/model"
 	"strings"
+
+	"github.com/TCP404/OneTiny-cli/core/model"
 )
 
 // TODO 对字符串拼接进行优化，推荐采用 strings.Builder 并提前设置好 Grow()

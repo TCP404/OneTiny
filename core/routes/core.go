@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"oneTiny/core/controller"
-	"oneTiny/core/middleware"
+	"github.com/TCP404/OneTiny-cli/core/controller"
+	"github.com/TCP404/OneTiny-cli/core/middleware"
 
 	"github.com/gin-gonic/gin"
 )

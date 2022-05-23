@@ -2,9 +2,10 @@ package controller
 
 import (
 	"net/http"
-	"oneTiny/common"
-	"oneTiny/common/config"
-	"oneTiny/core/util"
+
+	"github.com/TCP404/OneTiny-cli/common"
+	"github.com/TCP404/OneTiny-cli/common/config"
+	"github.com/TCP404/OneTiny-cli/core/util"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"

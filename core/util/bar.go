@@ -2,8 +2,9 @@ package util
 
 import (
 	"fmt"
-	"oneTiny/common/config"
 	"time"
+
+	"github.com/TCP404/OneTiny-cli/common/config"
 
 	pb "github.com/schollz/progressbar/v3"
 )

@@ -4,16 +4,17 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
-	"oneTiny/common"
-	"oneTiny/common/config"
-	"oneTiny/common/define"
-	"oneTiny/core/model"
-	"oneTiny/core/util"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/TCP404/OneTiny-cli/common"
+	"github.com/TCP404/OneTiny-cli/common/config"
+	"github.com/TCP404/OneTiny-cli/common/define"
+	"github.com/TCP404/OneTiny-cli/core/model"
+	"github.com/TCP404/OneTiny-cli/core/util"
 
 	"github.com/gin-gonic/gin"
 )

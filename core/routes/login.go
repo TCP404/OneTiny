@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"oneTiny/core/controller"
+	"github.com/TCP404/OneTiny-cli/core/controller"
 
 	"github.com/gin-gonic/gin"
 )

@@ -4,10 +4,11 @@ import (
 	"errors"
 	"log"
 	"net"
-	"oneTiny/common/config"
-	"oneTiny/core/middleware"
-	"oneTiny/core/routes"
 	"strconv"
+
+	"github.com/TCP404/OneTiny-cli/common/config"
+	"github.com/TCP404/OneTiny-cli/core/middleware"
+	"github.com/TCP404/OneTiny-cli/core/routes"
 
 	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"

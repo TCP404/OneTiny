@@ -4,11 +4,13 @@ import (
 	"errors"
 	"io"
 	"log"
-	"oneTiny/common"
-	"oneTiny/common/define"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/TCP404/OneTiny-cli/common"
+	"github.com/TCP404/OneTiny-cli/common/define"
+	"github.com/TCP404/eutil"
 
 	"github.com/fatih/color"
 	"github.com/spf13/viper"
@@ -17,7 +19,7 @@ import (
 // 配置优先级： flag > 配置文件 > 默认值
 
 var (
-	Output     io.Writer = os.Stderr
+	Output     io.Writer = If(runtime.GOOS == "windows", color.Output, os.Stderr).(io.Writer)
 	SessionVal string    = common.RandString(64)
 	OS         string    = runtime.GOOS // 程序所在的操作系统，默认值 linux
 	IP         string    = define.IP    // 本机局域网IP
@@ -45,7 +47,7 @@ func LoadConfig() error {
 		return err
 	}
 
-	IP, err = common.GetIP()
+	IP, err = eutil.GetIP()
 	if err != nil {
 		log.Println(color.YellowString("获取不到本机的局域网IP"))
 	}
@@ -64,10 +66,6 @@ func LoadConfig() error {
 	Port = viper.GetInt("server.port")
 	IsAllowUpload = viper.GetBool("server.allow_upload")
 	IsSecure = viper.GetBool("account.secure")
-
-	if OS == "windows" {
-		Output = color.Output
-	}
 	return nil
 }
 
@@ -116,4 +114,11 @@ func setDefault() error {
 	viper.Set("server.allow_upload", false)
 	viper.Set("server.max_level", 0)
 	return viper.WriteConfig()
+}
+
+func If(cond bool, t any, f any) any {
+	if cond {
+		return t
+	}
+	return f
 }

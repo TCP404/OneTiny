@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"oneTiny/common"
-	"oneTiny/common/config"
-	"oneTiny/common/define"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/TCP404/OneTiny-cli/common"
+	"github.com/TCP404/OneTiny-cli/common/config"
+	"github.com/TCP404/OneTiny-cli/common/define"
 
 	"github.com/fatih/color"
 	"github.com/parnurzeal/gorequest"
