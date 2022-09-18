@@ -37,15 +37,15 @@
 <hr />
 
 
-OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前工作目录临时共享目录，对局域网内其他主机共享，通过浏览器访问 `http://局域网IP:9090` 来访问和下载共享目录中的文件。
+OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前工作目录临时共享目录，对局域网内其他主机共享，通过浏览器访问 `http://局域网IP:8192` 来访问和下载共享目录中的文件。
 
-简而言之与命令 `python -m http.server 9090` 做的是同样的事情。
+简而言之与命令 `python -m http.server 8192` 做的是同样的事情。
 
 ## [需求]
 
 我有两台设备，一台装着 Linux 系统，一台装着 Windows 系统，偶尔需要互相传输文件。
 
-在 Linux 上我可以在任意一个目录下使用命令 `python -m http.server 9090`，从而在 Windows 上或局域网内其他主机上通过浏览器访问 `http://局域网IP:9090` 查看所有文件，也可以下载;
+在 Linux 上我可以在任意一个目录下使用命令 `python -m http.server 8192`，从而在 Windows 上或局域网内其他主机上通过浏览器访问 `http://局域网IP:8192` 查看所有文件，也可以下载;
 
 但是这条命令在 Windows 上不可行，所以需要编写一个程序可以运行在 Windows 上实现同样的功能。
 
@@ -55,12 +55,12 @@ OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前
 - CLI管理：[urfave/cli](https://github.com/urfave/cli/v2)
 
 ## [使用说明]
-可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.3.0/OneTiny)、[Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.3.0/OneTiny.exe)，[Mac 版](https://github.com/TCP404/OneTiny/releases/download/v0.3.0/OneTiny_mac)，其他系统的同学请下载后自行编译。
+可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.5.0/OneTiny)、[Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.5.0/OneTiny.exe)，[Mac 版](https://github.com/TCP404/OneTiny/releases/download/v0.5.0/OneTiny_mac)，其他系统的同学请下载后自行编译。
 
 ### [下载]
 **Linux**、**Mac**：
 ```bash
-$ curl -LJ https://github.com/TCP404/OneTiny/releases/download/v0.3.0/OneTiny -o onetiny
+$ curl -LJ https://github.com/TCP404/OneTiny/releases/download/v0.5.0/OneTiny -o onetiny
 $ chmod u+x ./onetiny             # 赋予执行权限
 $ cp onetiny /usr/bin             # 复制到可执行文件目录并修改可执行文件名称
 ```
@@ -123,19 +123,19 @@ onetiny
 下载后双击 `OneTiny.exe` 即可运行（需管理员权限）。
 可以在CMD中切换到 `OneTiny.exe` 所在目录，执行以下任一命令：
 ```cmd
-> OneTiny                               # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传
-> OneTiny.exe                           # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传
+> OneTiny                               # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，禁止上传
+> OneTiny.exe                           # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，禁止上传
 > OneTiny -p {端口号}                    # 将运行在 http://本机局域网IP:端口号，共享目录为当前工作目录，禁止上传
-> OneTiny -r {共享目录绝对路径}            # 将运行在 http://本机局域网IP:9090，共享目录为指定目录，禁止上传
-> OneTiny -a [1|t|T|true|True|TRUE|空]  # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，允许上传
-> OneTiny -x {0～255}                   # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传，默认仅允许访问共享目录一层，禁止进入下一层目录
+> OneTiny -r {共享目录绝对路径}            # 将运行在 http://本机局域网IP:8192，共享目录为指定目录，禁止上传
+> OneTiny -a [1|t|T|true|True|TRUE|空]  # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，允许上传
+> OneTiny -x {0～255}                   # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，禁止上传，默认仅允许访问共享目录一层，禁止进入下一层目录
 > onetiny -s [1|t|T|true|True|TRUE|空]  # 开启后访问时需登录帐号密码
 
 配置命令，配置后仅使用 onetiny 命令运行，即可使用配置好的端口、路径、层级、上传允许状态等，无需再次指定
 > onetiny c -p {端口号}                       # 将运行在 http://本机局域网IP:端口号，共享目录为当前工作目录，禁止上传
-> onetiny cf -r {共享目录绝对路径}              # 将运行在 http://本机局域网IP:9090，共享目录为指定工作目录，禁止上传
-> onetiny conf -a [1|t|T|true|True|TRUE|空]  # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，允许上传
-> onetiny config -x {0~255}                  # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传，默认仅允许访问共享目录一层，禁止进入下一层目录
+> onetiny cf -r {共享目录绝对路径}              # 将运行在 http://本机局域网IP:8192，共享目录为指定工作目录，禁止上传
+> onetiny conf -a [1|t|T|true|True|TRUE|空]  # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，允许上传
+> onetiny config -x {0~255}                  # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，禁止上传，默认仅允许访问共享目录一层，禁止进入下一层目录
 > onetiny -s [1|t|T|true|True|TRUE|空]       # 配置后访问时需登录帐号密码
 
 开启访问登录，需先设置账号密码
@@ -162,18 +162,18 @@ onetiny
 
 **Linux**、**Mac**:
 ```bash
-$ onetiny                              # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传
+$ onetiny                              # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，禁止上传
 $ onetiny -p {端口号}                   # 将运行在 http://本机局域网IP:端口号，共享目录为当前工作目录，禁止上传
-$ onetiny -r {共享目录绝对路径}           # 将运行在 http://本机局域网IP:9090，共享目录为指定工作目录，禁止上传
-$ onetiny -a [1|t|T|true|True|TRUE|空] # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，允许上传
-$ onetiny -x {0~255}                   # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传，默认仅允许访问共享目录一层，禁止进入下一层目录
+$ onetiny -r {共享目录绝对路径}           # 将运行在 http://本机局域网IP:8192，共享目录为指定工作目录，禁止上传
+$ onetiny -a [1|t|T|true|True|TRUE|空] # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，允许上传
+$ onetiny -x {0~255}                   # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，禁止上传，默认仅允许访问共享目录一层，禁止进入下一层目录
 $ onetiny -s [1|t|T|true|True|TRUE|空] # 开启后访问时需登录帐号密码
 
 配置命令，配置后仅使用 onetiny 命令运行，即可使用配置好的端口、路径、层级、上传允许状态等
 $ onetiny c -p {端口号}                       # 将运行在 http://本机局域网IP:端口号，共享目录为当前工作目录，禁止上传
-$ onetiny cf -r {共享目录绝对路径}              # 将运行在 http://本机局域网IP:9090，共享目录为指定工作目录，禁止上传
-$ onetiny conf -a [1|t|T|true|True|TRUE|空]  # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，允许上传
-$ onetiny config -x {0~255}                  # 将运行在 http://本机局域网IP:9090，共享目录为当前工作目录，禁止上传，默认仅允许访问共享目录一层，禁止进入下一层目录
+$ onetiny cf -r {共享目录绝对路径}              # 将运行在 http://本机局域网IP:8192，共享目录为指定工作目录，禁止上传
+$ onetiny conf -a [1|t|T|true|True|TRUE|空]  # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，允许上传
+$ onetiny config -x {0~255}                  # 将运行在 http://本机局域网IP:8192，共享目录为当前工作目录，禁止上传，默认仅允许访问共享目录一层，禁止进入下一层目录
 $ onetiny -s [1|t|T|true|True|TRUE|空]       # 配置后访问时需登录帐号密码
 
 开启访问登录，需先设置账号密码
@@ -222,7 +222,7 @@ COMMANDS:
 
 GLOBAL OPTIONS:
    --road    路径, -r 路径   指定对外开放的目录路径 (default: /home/boii)
-   --port    端口, -p 端口   指定开放的端口 (default: 9110)
+   --port    端口, -p 端口   指定开放的端口 (default: 8192)
    --allow   是否, -a 是否   指定是否允许访问者上传 (default: true)
    --max     深度, -x 深度   指定允许访问的深度，默认仅限访问共享目录 (default: 0)
    --secure  开启, -s 开启   指定是否开启访问登录 (default: true)
@@ -246,8 +246,8 @@ DESCRIPTION:
       onetiny config -a false  可以设置不允许访问者上传并写入配置
 
 OPTIONS:
-   --road   路径, -r 路径   指定对外开放的目录路径 (default: /)
-   --port   端口, -p 端口   指定开放的端口 (default: 9090)
+   --road   路径, -r 路径   指定对外开放的目录路径 (default: /home/boii)
+   --port   端口, -p 端口   指定开放的端口 (default: 8192)
    --allow  是否, -a 是否   指定是否允许访问者上传 (default: false)
    --max    深度, -x 深度   指定允许访问的深度，默认仅限访问共享目录 (default: 0)
    --secure 开启, -s 开启   指定是否开启访问登录 (default: false)
@@ -324,6 +324,7 @@ OPTIONS:
 - [x] 上传功能
 - [x] 限定访问层级
 - [x] 密码验证功能（防止局域网内监听）
+- [x] 打包目录至 .zip 并下载
 - [ ] 断点续传
 - [ ] 大文件多线程下载
 - [ ] 自动检查更新功能

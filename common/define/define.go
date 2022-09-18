@@ -1,9 +1,8 @@
 package define
 
 const (
-	VERSION    string = "v0.4.0"
-	ROOT       string = "/"
-	SEPARATORS string = "/"
+	VERSION string = "v0.5.0"
+	ROOT    string = "/"
 )
 
 const (
