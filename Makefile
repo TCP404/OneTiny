@@ -1,8 +1,8 @@
 GO_BUILD=go build -ldflags "-s -w" -o
 
 BINARY_NAME=OneTiny
-MAC_AMD_EXE :=./exe/$(BINARY_NAME)_amd64
-MAC_ARM_EXE :=./exe/$(BINARY_NAME)_arm64
+MAC_AMD_EXE :=./exe/$(BINARY_NAME)_amd64.dmg
+MAC_ARM_EXE :=./exe/$(BINARY_NAME)_arm64.dmg
 LINUX_EXE   :=./exe/$(BINARY_NAME)
 WINDOWS_EXE :=./exe/$(BINARY_NAME).exe
 
