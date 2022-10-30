@@ -1,4 +1,5 @@
-GO_BUILD=go build -ldflags "-s -w" -o
+VERSION=v0.6.0
+GO_BUILD=go build -ldflags "-s -w -X github.com/TCP404/OneTiny-cli/internal/constant.VERSION=$(VERSION)" -o
 
 BINARY_NAME=OneTiny
 MAC_AMD_EXE :=./exe/$(BINARY_NAME)_amd64.dmg

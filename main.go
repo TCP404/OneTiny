@@ -5,9 +5,11 @@ import (
 	"os"
 
 	"github.com/TCP404/OneTiny-cli/cmd"
-	"github.com/TCP404/OneTiny-cli/config"
-	"github.com/TCP404/OneTiny-cli/core"
-	"github.com/TCP404/OneTiny-cli/external"
+	"github.com/TCP404/OneTiny-cli/internal/conf"
+	"github.com/TCP404/OneTiny-cli/internal/kit/verify"
+	"github.com/TCP404/OneTiny-cli/internal/server"
+	"github.com/TCP404/OneTiny-cli/pkg/container"
+
 	"github.com/fatih/color"
 )
 
@@ -19,19 +21,20 @@ func main() {
 		}
 	}()
 
-	if err = config.LoadConfig(); err != nil {
+	if err = conf.LoadConfig(); err != nil {
 		return
 	}
+
 	if err = cmd.CLI().Run(os.Args); err != nil {
 		return
 	}
-	coreClient := external.Core
-	if err = coreClient.NewVerifyChain().
-		AddToHead(coreClient.NewPortHandler(config.Port)).
-		AddToHead(coreClient.NewPathHandler(config.RootPath)).
+
+	if err = container.NewHandleChain().
+		AddToHead(verify.NewPortVerifier(conf.Config.Port)).
+		AddToHead(verify.NewPathVerifier(conf.Config.RootPath)).
 		Iterator(); err != nil {
 		return
 	}
 
-	core.RunCore()
+	server.RunCore()
 }

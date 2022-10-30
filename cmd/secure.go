@@ -11,9 +11,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var secureCmd = newSecureCmd()
-
-func newSecureCmd() *cli.Command {
+func secureCmd() *cli.Command {
 	return &cli.Command{
 		Name:        "sec",
 		Aliases:     []string{"s"},
@@ -119,27 +117,20 @@ func Handle(weight ups) error {
 		fallthrough
 	case USER:
 		// 100 设置用户名，需配置文件中有密码
-		return If(viper.GetString("account.custom.pass") != "", nil, errors.New("未找到您的帐号，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。")).(error)
+		return eutil.If(viper.GetString("account.custom.pass") != "", nil, errors.New("未找到您的帐号，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。"))
 	case PASS | SECU:
 		// 011 开启访问登录，并设置密码，穿透下去检查是否有帐户名
 		fallthrough
 	case PASS:
 		// 010 设置密码，需配置文件中有账户名
-		return If(viper.GetString("account.custom.user") != "", nil, errors.New("未找到您的帐号，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。")).(error)
+		return eutil.If(viper.GetString("account.custom.user") != "", nil, errors.New("未找到您的帐号，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。"))
 	case SECU:
 		// 001 开启访问登录
-		return If(viper.GetString("account.custom.user") != "" && viper.GetString("account.custom.pass") != "", nil, errors.New("开启访问登录需先设置帐号密码，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。")).(error)
+		return eutil.If(viper.GetString("account.custom.user") != "" && viper.GetString("account.custom.pass") != "", nil, errors.New("开启访问登录需先设置帐号密码，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。"))
 	case 0:
 		// 000 打印当前是否开启访问登录
 		return nil
 	default:
 		return errors.New("设置失败～")
 	}
-}
-
-func If(cond bool, t any, f any) any {
-	if cond {
-		return t
-	}
-	return f
 }

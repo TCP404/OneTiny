@@ -1,34 +1,15 @@
 package cmd
 
-//  onetiny
-//  ├── -r
-//  ├── -p
-//  ├── -a
-//  ├── -x
-//  ├── -s
-//  ├── config
-//  │   ├── -r
-//  │   ├── -p
-//  │   ├── -a
-//  │   ├── -x
-//  │   └── -s
-//  ├── sec
-//  │   ├── -u
-//  │   ├── -p
-//  │   └── -s
-//  └── update
-//      ├── --use
-//      └── -l
-
 import (
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/TCP404/OneTiny-cli/config"
-
-	"github.com/TCP404/OneTiny-cli/common/define"
+	"github.com/TCP404/OneTiny-cli/internal/conf"
+	"github.com/TCP404/OneTiny-cli/internal/constant"
+	"github.com/TCP404/OneTiny-cli/internal/kit/verify"
+	"github.com/TCP404/OneTiny-cli/pkg/container"
 
 	"github.com/urfave/cli/v2"
 )
@@ -48,11 +29,11 @@ func initCLI() {
 		Aliases: []string{"h"},
 		Usage:   "打印帮助信息",
 	}
-	cli.HelpPrinter = func(w io.Writer, templ string, data interface{}) {
-		cli.HelpPrinterCustom(w, templ, data, nil)
+	cli.HelpPrinter = func(w io.Writer, temp string, data interface{}) {
+		cli.HelpPrinterCustom(w, temp, data, nil)
 		os.Exit(0)
 	}
-	cli.ErrWriter = config.Output
+	cli.ErrWriter = conf.Config.Output
 }
 
 // CLI 函数作为程序入口，主要负责处理命令和 flag
@@ -63,27 +44,42 @@ func CLI() *cli.App {
 		Name:            "OneTiny",
 		Usage:           "一个用于局域网内共享文件的FTP程序",
 		UsageText:       "onetiny [GLOBAL OPTIONS] COMMAND [COMMAND OPTIONS] [参数...]",
-		Version:         define.VERSION,
+		Version:         constant.VERSION,
 		Flags:           newGlobalFlag(),
 		Authors:         []*cli.Author{{Name: "Boii", Email: "i@tcp404.com"}},
-		Commands:        []*cli.Command{updateCmd, configCmd, secureCmd},
+		Commands:        []*cli.Command{updateCmd(), configCmd(), secureCmd()},
 		CommandNotFound: func(c *cli.Context, s string) { cli.ShowAppHelpAndExit(c, 10) },
-		Writer:          config.Output,
-		ErrWriter:       config.Output,
-		Action: func(c *cli.Context) error {
-			config.Port = c.Int("port")
-			config.MaxLevel = uint8(c.Int("max"))
-			config.IsAllowUpload = c.Bool("allow")
-			config.IsSecure = c.Bool("secure")
-			if c.IsSet("road") {
-				p := c.Path("road")
-				if p[0] == '.' {
-					curr, _ := os.Getwd()
-					p = filepath.Join(curr, p)
-				}
-				config.RootPath = p
-			}
-			return nil
-		},
+		Writer:          conf.Config.Output,
+		ErrWriter:       conf.Config.Output,
+		After:           afterRootAction,
+		Action:          rootAction,
 	}
+}
+
+func afterRootAction(c *cli.Context) error {
+	return container.NewHandleChain().
+		AddToHead(verify.NewPortVerifier(conf.Config.Port)).
+		AddToHead(verify.NewPathVerifier(conf.Config.RootPath)).
+		Iterator()
+}
+
+func rootAction(c *cli.Context) error {
+	conf.Config.Port = c.Int("port")
+	conf.Config.MaxLevel = uint8(c.Int("max"))
+	conf.Config.IsAllowUpload = c.Bool("allow")
+	conf.Config.IsSecure = c.Bool("secure")
+	if c.IsSet("road") {
+		road := c.Path("road")
+		if road[0] == '.' {
+			pwd, _ := os.Getwd()
+			road = filepath.Join(pwd, road)
+		}
+		conf.Config.RootPath = road
+	}
+	// 开启登录的时候查一下是否有设置账号密码
+	// if c.IsSet("secure") {
+
+	// }
+
+	return nil
 }

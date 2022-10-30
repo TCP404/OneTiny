@@ -3,8 +3,7 @@ module github.com/TCP404/OneTiny-cli
 go 1.18
 
 require (
-	github.com/TCP404/OneTiny-core v0.0.1
-	github.com/TCP404/eutil v0.0.4
+	github.com/TCP404/eutil v0.0.5
 	github.com/fatih/color v1.13.0
 	github.com/gin-contrib/sessions v0.0.5
 	github.com/gin-gonic/gin v1.7.7
@@ -13,8 +12,6 @@ require (
 	github.com/spf13/viper v1.12.0
 	github.com/urfave/cli/v2 v2.8.1
 )
-
-replace github.com/TCP404/eutil => ../eutil
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
@@ -29,6 +26,7 @@ require (
 	github.com/gorilla/sessions v1.2.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/jtolds/gls v4.20.0+incompatible // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
