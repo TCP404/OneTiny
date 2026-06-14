@@ -57,6 +57,20 @@ OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前
 ## [使用说明]
 可从本仓库的 [Release](https://github.com/TCP404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/TCP404/OneTiny/releases/download/v0.5.0/OneTiny)、[Windows 版](https://github.com/TCP404/OneTiny/releases/download/v0.5.0/OneTiny.exe)，[Mac 版](https://github.com/TCP404/OneTiny/releases/download/v0.5.0/OneTiny_mac)，其他系统的同学请下载后自行编译。
 
+### GUI 控制面板
+
+桌面控制面板用于本机管理共享服务。打开 GUI 不会自动开始共享，点击“启动共享”后才会启动 HTTP 服务。
+
+控制面板支持：
+
+- 查看访问地址和运行状态。
+- 启动、停止共享服务。
+- 修改共享目录、上传开关、登录开关和最大访问层级，并在服务运行中立即生效。
+- 修改端口时弹出确认，确认后重启共享服务。
+- 未配置账号密码时，开启登录保护会先要求设置账号密码。
+- 关闭窗口时隐藏到托盘；托盘左键打开面板，右键菜单包含“打开面板”和“退出”。
+- 查看、筛选、清空和导出访问日志。
+
 ### [下载]
 **Linux**、**Mac**：
 ```bash
@@ -275,6 +289,16 @@ OPTIONS:
    --pass   密码, -p 密码  设置访问登录的密码
    --secure 开启, -s 开启  设置开启访问登录，效果同 onetiny -s 一样 (default: false)
    --help,        -h      打印帮助信息 (default: false)
+```
+
+### 登录配置迁移说明
+
+新版本不再使用 MD5 保存访问登录密码。`onetiny sec` 会写入 bcrypt 密码哈希。
+
+如果旧配置中已经开启访问登录，并且仍然存在旧版 MD5 密码字段，服务会拒绝启动并提示重新设置账号密码：
+
+```bash
+onetiny sec -u=你的账号 -p=你的密码 -s
 ```
 
 update 子命令:

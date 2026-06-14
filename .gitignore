@@ -114,6 +114,11 @@ fabric.properties
 ### Linux ###
 *~
 
+frontend/node_modules/
+/onetiny-gui
+bin/
+build/bin/
+
 # temporary files which can be created if a process still has a handle open of a deleted file
 .fuse_hidden*
 
@@ -246,5 +251,7 @@ $RECYCLE.BIN/
 
 ### Custom ###
 exe/
+.superpowers/
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,visualstudiocode,goland,sublimetext
+.playwright-mcp/

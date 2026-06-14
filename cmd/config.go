@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/TCP404/OneTiny-cli/internal/conf"
 	"github.com/TCP404/OneTiny-cli/internal/kit/verify"
 	"github.com/TCP404/OneTiny-cli/pkg/container"
 	"github.com/fatih/color"
@@ -42,6 +43,11 @@ func beforeConfigAction(c *cli.Context) error {
 
 func configAction(c *cli.Context) error {
 	// tiny config -p=8080 -x=3
+	if c.IsSet("secure") && c.Bool("secure") {
+		if err := conf.ValidateSecureConfigFor(true); err != nil {
+			return cli.Exit(color.RedString(err.Error()), 11)
+		}
+	}
 	if c.IsSet("port") {
 		viper.Set("server.port", c.Int("port"))
 	}

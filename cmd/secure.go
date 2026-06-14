@@ -5,7 +5,8 @@ import (
 
 	"errors"
 
-	"github.com/TCP404/eutil"
+	"github.com/TCP404/OneTiny-cli/internal/conf"
+	"github.com/TCP404/OneTiny-cli/internal/security"
 	"github.com/fatih/color"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
@@ -39,11 +40,11 @@ func secureCmd() *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			weight, err := secureAction(c)
+			_, err := secureAction(c)
 			if err != nil {
 				return cli.Exit(color.RedString(err.Error()), 21)
 			}
-			if weight == 0 {
+			if !hasSecureFlag(c) {
 				return cli.Exit(color.GreenString("当前访问登录是否已开启: %t", viper.GetBool("account.secure")), 0)
 			}
 			if err := viper.WriteConfig(); err != nil {
@@ -52,6 +53,10 @@ func secureCmd() *cli.Command {
 			return cli.Exit(color.GreenString("设置成功~"), 0)
 		},
 	}
+}
+
+func hasSecureFlag(c *cli.Context) bool {
+	return c.IsSet("user") || c.IsSet("pass") || c.IsSet("secure")
 }
 
 // ups 是 User、Pass、Secure 三个单词的首字母合并，
@@ -70,24 +75,56 @@ const (
 
 func secureAction(c *cli.Context) (ups, error) {
 	var weight ups
+	credentials := conf.CredentialConfigFromViper()
+
 	// 当填写了 -s 选项并且 -s 的值为 true 时才设置
-	if is, s := c.IsSet("secure"), c.Bool("secure"); is {
-		if s {
+	secureIsSet, secureValue := c.IsSet("secure"), c.Bool("secure")
+	effectiveSecure := viper.GetBool("account.secure")
+	if secureIsSet {
+		if secureValue {
 			weight |= SECU
 		}
-		viper.Set("account.secure", s)
+		effectiveSecure = secureValue
 	}
+
 	// 当填写了 -u 选项并且 -u 的值不为 空 时才设置
 	if is, u := c.IsSet("user"), c.String("user"); is && u != "" {
 		weight |= USER
-		viper.Set("account.custom.user", eutil.MD5(u))
+		credentials.Username = u
 	}
 	// 当填写了 -p 选项并且 -p 的值不为 空 时才设置
 	if is, p := c.IsSet("pass"), c.String("pass"); is && p != "" {
 		weight |= PASS
-		viper.Set("account.custom.pass", eutil.MD5(p))
+		hash, err := security.HashPassword(p)
+		if err != nil {
+			return weight, err
+		}
+		credentials.PasswordHash = hash
+		credentials.HashAlgo = security.HashAlgoBcrypt
+		credentials.LegacyMD5 = ""
 	}
-	return weight, Handle(weight)
+
+	if effectiveSecure {
+		if err := validateCredentialsForSecureMode(credentials); err != nil {
+			return weight, err
+		}
+	} else {
+		if err := handleCredentialConfig(weight, credentials); err != nil {
+			return weight, err
+		}
+	}
+
+	if secureIsSet {
+		viper.Set("account.secure", secureValue)
+	}
+
+	if weight&USER != 0 {
+		viper.Set("account.custom.user", credentials.Username)
+	}
+	if weight&PASS != 0 {
+		conf.SetCredentialConfig(credentials.Username, credentials.PasswordHash)
+	}
+	return weight, nil
 }
 
 // Handle 检查UPS
@@ -105,32 +142,52 @@ func secureAction(c *cli.Context) (ups, error) {
 // 设置密码时，需配置文件中已设置账户
 // 设置账户时，需配置文件中已设置密码
 func Handle(weight ups) error {
+	return handleCredentialConfig(weight, conf.CredentialConfigFromViper())
+}
+
+func handleCredentialConfig(weight ups, credentials security.CredentialConfig) error {
 	switch weight {
 	case USER | PASS | SECU:
 		// 111 开启访问登录，并设置账户和密码
-		return nil
+		return validateCredentialsForSecureMode(credentials)
 	case USER | PASS:
 		// 110 设置账户和密码
 		return nil
 	case USER | SECU:
-		// 101 开启访问登录，并设置用户名，穿透下去检查是否有密码
-		fallthrough
+		// 101 开启访问登录，并设置用户名
+		return validateCredentialsForSecureMode(credentials)
 	case USER:
 		// 100 设置用户名，需配置文件中有密码
-		return eutil.If(viper.GetString("account.custom.pass") != "", nil, errors.New("未找到您的帐号，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。"))
+		if credentials.IsConfigured() {
+			return nil
+		}
+		return errors.New("未找到您的帐号，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。")
 	case PASS | SECU:
-		// 011 开启访问登录，并设置密码，穿透下去检查是否有帐户名
-		fallthrough
+		// 011 开启访问登录，并设置密码
+		return validateCredentialsForSecureMode(credentials)
 	case PASS:
 		// 010 设置密码，需配置文件中有账户名
-		return eutil.If(viper.GetString("account.custom.user") != "", nil, errors.New("未找到您的帐号，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。"))
+		if credentials.Username != "" {
+			return nil
+		}
+		return errors.New("未找到您的帐号，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。")
 	case SECU:
 		// 001 开启访问登录
-		return eutil.If(viper.GetString("account.custom.user") != "" && viper.GetString("account.custom.pass") != "", nil, errors.New("开启访问登录需先设置帐号密码，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。"))
+		return validateCredentialsForSecureMode(credentials)
 	case 0:
 		// 000 打印当前是否开启访问登录
 		return nil
 	default:
 		return errors.New("设置失败～")
 	}
+}
+
+func validateCredentialsForSecureMode(credentials security.CredentialConfig) error {
+	if err := credentials.ValidateForSecureMode(); err != nil {
+		if errors.Is(err, security.ErrMissingCredentials) {
+			return errors.New("开启访问登录需先设置帐号密码，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。")
+		}
+		return err
+	}
+	return nil
 }

@@ -1,0 +1,35 @@
+version: '3'
+
+vars:
+  APP_NAME: "OneTiny"
+  BIN_DIR: "build/bin"
+
+tasks:
+  build:
+    summary: Builds the desktop application for the current platform
+    cmds:
+      - task: "{{OS}}:build"
+
+  darwin:build:
+    summary: Builds the macOS desktop application
+    cmds:
+      - npm install --prefix frontend
+      - npm run build --prefix frontend
+      - mkdir -p "{{.BIN_DIR}}"
+      - go build -o "{{.BIN_DIR}}/{{.APP_NAME}}" ./cmd/onetiny-gui
+
+  linux:build:
+    summary: Builds the Linux desktop application
+    cmds:
+      - npm install --prefix frontend
+      - npm run build --prefix frontend
+      - mkdir -p "{{.BIN_DIR}}"
+      - go build -o "{{.BIN_DIR}}/{{.APP_NAME}}" ./cmd/onetiny-gui
+
+  windows:build:
+    summary: Builds the Windows desktop application
+    cmds:
+      - npm install --prefix frontend
+      - npm run build --prefix frontend
+      - if not exist "{{.BIN_DIR}}" mkdir "{{.BIN_DIR}}"
+      - go build -o "{{.BIN_DIR}}/{{.APP_NAME}}.exe" ./cmd/onetiny-gui

@@ -13,9 +13,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TCP404/OneTiny-cli/internal/accesslog"
 	"github.com/TCP404/OneTiny-cli/internal/conf"
 	"github.com/TCP404/OneTiny-cli/internal/constant"
 	"github.com/TCP404/OneTiny-cli/internal/handle"
+	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
 	"github.com/TCP404/OneTiny-cli/pkg"
 	"github.com/TCP404/eutil"
 	"github.com/gin-gonic/gin"
@@ -29,19 +31,42 @@ type fileStructure struct {
 	Name          string
 }
 type agent struct {
-	abs    string
-	rel    string
-	action string
-	isDir  bool
+	abs         string
+	rel         string
+	action      string
+	isDir       bool
+	rootPath    string
+	allowUpload bool
 }
 
 func Downloader(c *gin.Context) {
+	cfg := currentSnapshot(c)
 	road := c.GetString("filename")
+	abs, ok := runtimeconf.ResolveWithinRoot(cfg.RootPath, road)
+	if !ok {
+		c.String(http.StatusNotFound, "访问超出允许范围，请返回！")
+		c.Abort()
+		return
+	}
+	if _, err := os.Lstat(abs); err == nil {
+		abs, ok = runtimeconf.ResolveExistingWithinRoot(cfg.RootPath, road)
+		if !ok {
+			c.String(http.StatusNotFound, "访问超出允许范围，请返回！")
+			c.Abort()
+			return
+		}
+	} else if !os.IsNotExist(err) {
+		c.String(http.StatusNotFound, "访问超出允许范围，请返回！")
+		c.Abort()
+		return
+	}
 	a := &agent{
-		abs:    filepath.Join(conf.Config.RootPath, road),
-		rel:    road,
-		action: c.Query("action"),
-		isDir:  c.GetBool("isDirectory"),
+		abs:         abs,
+		rel:         road,
+		action:      c.Query("action"),
+		isDir:       c.GetBool("isDirectory"),
+		rootPath:    cfg.RootPath,
+		allowUpload: cfg.IsAllowUpload,
 	}
 
 	if a.rel == constant.ROOT {
@@ -59,6 +84,7 @@ func (a *agent) file(c *gin.Context) {
 	src, err := os.Open(a.abs)
 	if err != nil {
 		handle.ErrorHandle(c, err.Error())
+		return
 	}
 	defer func(src *os.File) { _ = src.Close() }(src)
 
@@ -76,11 +102,21 @@ func (a *agent) file(c *gin.Context) {
 
 	// 小于 buf 时直接读取到 buf 中然后返回
 	if contentLen < int64(len(buf)) {
-		_, _ = io.CopyBuffer(io.MultiWriter(c.Writer, bar), src, buf)
+		if _, err := io.CopyBuffer(io.MultiWriter(c.Writer, bar), src, buf); err != nil {
+			logDownloadFailure(c)
+			writeDownloadError(c)
+			return
+		}
+		logRequestEvent(c, accesslog.EventDownload, accesslog.ResultSuccess, http.StatusOK)
 		return
 	}
 	// 超过 buf 的大小时分片传输
-	a.flush(c, src, buf)
+	if err := a.flush(c, src, buf); err != nil {
+		logDownloadFailure(c)
+		writeDownloadError(c)
+		return
+	}
+	logRequestEvent(c, accesslog.EventDownload, accesslog.ResultSuccess, http.StatusOK)
 }
 
 func (a *agent) dir(c *gin.Context) {
@@ -100,42 +136,59 @@ func (a *agent) dir(c *gin.Context) {
 	srcZip, err := os.CreateTemp(os.TempDir(), "temp.*.zip")
 	if err != nil {
 		handle.ErrorHandle(c, "压缩目录失败")
+		return
 	}
 	defer func(srcZip *os.File) {
 		_ = srcZip.Close()
 		_ = os.Remove(srcZip.Name())
 	}(srcZip)
 
-	err = eutil.Zip(srcZip, filepath.Join(conf.Config.RootPath, a.rel))
+	err = eutil.Zip(srcZip, a.abs)
 	if err != nil {
 		handle.ErrorHandle(c, "压缩目录失败, "+err.Error())
+		return
 	}
 
 	buf := make([]byte, constant.BufferLimit)
 	if contentLen < int64(len(buf)) {
 		c.File(srcZip.Name())
+		logRequestEvent(c, accesslog.EventDownload, accesslog.ResultSuccess, http.StatusOK)
 		return
 	}
-	a.flush(c, srcZip, buf)
+	if _, err := srcZip.Seek(0, io.SeekStart); err != nil {
+		logDownloadFailure(c)
+		writeDownloadError(c)
+		return
+	}
+	if err := a.flush(c, srcZip, buf); err != nil {
+		logDownloadFailure(c)
+		writeDownloadError(c)
+		return
+	}
+	logRequestEvent(c, accesslog.EventDownload, accesslog.ResultSuccess, http.StatusOK)
 }
 
 func (a *agent) readDir(c *gin.Context) {
-	files := getFileInfos(c, filepath.Join(conf.Config.RootPath, a.rel))
+	files := getFileInfos(c, a.rootPath, a.abs)
 	c.HTML(http.StatusOK, "list.tpl", gin.H{
 		"pathTitle": a.rel,
-		"upload":    conf.Config.IsAllowUpload,
+		"upload":    a.allowUpload,
 		"files":     files,
 	})
 }
 
-func getFileInfos(c *gin.Context, absPath string) []fileStructure {
+func getFileInfos(c *gin.Context, rootPath, absPath string) []fileStructure {
 	dirEntries, err := os.ReadDir(absPath)
 	if err != nil {
 		handle.ErrorHandle(c, "目录读取失败！")
 		return nil
 	}
 
-	relPath := strings.TrimPrefix(absPath, conf.Config.RootPath)
+	relPath, err := filepath.Rel(rootPath, absPath)
+	if err != nil {
+		relPath = strings.TrimPrefix(absPath, rootPath)
+	}
+	relPath = filepath.ToSlash(relPath)
 	fileInfos := make([]fileStructure, len(dirEntries))
 
 	for i, f := range dirEntries {
@@ -161,23 +214,30 @@ func getFileInfos(c *gin.Context, absPath string) []fileStructure {
 	return fileInfos
 }
 
-func (a *agent) flush(c *gin.Context, src io.Reader, buf []byte) {
+func (a *agent) flush(c *gin.Context, src io.Reader, buf []byte) error {
 	data := bufio.NewReader(src)
 	bar := pkg.GetBar(a.rel, getContentLen(a.abs), conf.Config.Output)
 
 	for {
-		_, err := data.Read(buf)
+		n, err := data.Read(buf)
+		if n > 0 {
+			chunk := buf[:n]
+			if _, writeErr := bar.Write(chunk); writeErr != nil {
+				return writeErr
+			}
+			if _, writeErr := c.Writer.Write(chunk); writeErr != nil {
+				return writeErr
+			}
+			c.Writer.(http.Flusher).Flush()
+		}
 		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
-			handle.ErrorHandle(c, "server error!")
-			return
+			return err
 		}
-		_, _ = bar.Write(buf)
-		_, _ = c.Writer.Write(buf)
-		c.Writer.(http.Flusher).Flush()
 	}
+	return nil
 }
 
 func getContentLen(absPath string) int64 {
@@ -187,4 +247,50 @@ func getContentLen(absPath string) int64 {
 		contentLen = info.Size()
 	}
 	return contentLen
+}
+
+func logRequestEvent(c *gin.Context, event, result string, status int) {
+	accesslog.Log(accesslog.Event{
+		ClientIP: clientIP(c),
+		Method:   method(c),
+		Event:    event,
+		Path:     requestPath(c),
+		Status:   status,
+		Result:   result,
+	})
+}
+
+func logDownloadFailure(c *gin.Context) {
+	logRequestEvent(c, accesslog.EventDownload, accesslog.ResultFailure, http.StatusInternalServerError)
+}
+
+func writeDownloadError(c *gin.Context) {
+	if c == nil {
+		return
+	}
+	if c.Writer != nil && c.Writer.Written() {
+		return
+	}
+	c.Status(http.StatusInternalServerError)
+}
+
+func clientIP(c *gin.Context) string {
+	if c == nil {
+		return ""
+	}
+	return c.ClientIP()
+}
+
+func method(c *gin.Context) string {
+	if c == nil || c.Request == nil {
+		return ""
+	}
+	return c.Request.Method
+}
+
+func requestPath(c *gin.Context) string {
+	if c == nil || c.Request == nil || c.Request.URL == nil {
+		return ""
+	}
+	return c.Request.URL.Path
 }

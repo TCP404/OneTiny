@@ -1,0 +1,7 @@
+{
+  "name": "OneTiny",
+  "outputfilename": "OneTiny",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev"
+}

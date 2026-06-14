@@ -1,66 +1,81 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
-	"time"
 
 	"github.com/TCP404/OneTiny-cli/internal/conf"
+	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
 	"github.com/TCP404/OneTiny-cli/internal/server/middleware"
 	"github.com/TCP404/OneTiny-cli/internal/server/routes"
 	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"
 )
 
+type coreManager interface {
+	Start() error
+	Stop() error
+	Done() <-chan error
+}
+
 // RunCore 函数负责启动 gin 实例，开始提供 HTTP 服务
 func RunCore() {
-	var (
-		srv = initServer()
-		q   = make(chan os.Signal, 1)
-	)
+	cfg := runtimeconf.NewRuntimeConfig(snapshotFromGlobalConfig())
+	manager := NewServiceManager(cfg)
+	q := make(chan os.Signal, 1)
 	signal.Notify(q, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(q)
 
-	{
-		go run(srv)
-		<-q
-		exit(srv)
+	if runCoreWithManager(manager, q, printInfo) {
+		os.Exit(0)
 	}
 }
 
-func initServer() *http.Server {
-	gin.SetMode(gin.ReleaseMode)
-	r := gin.New()
+func runCoreWithManager(manager coreManager, signalChan <-chan os.Signal, printStartup func()) bool {
+	if err := manager.Start(); err != nil {
+		log.Println(color.RedString(err.Error()))
+		return false
+	}
+	if printStartup != nil {
+		printStartup()
+	}
+
+	select {
+	case <-signalChan:
+		if err := manager.Stop(); err != nil {
+			log.Println(color.RedString(err.Error()))
+		}
+		fmt.Println(color.GreenString("\nbye~"))
+		return true
+	case err := <-manager.Done():
+		if err != nil {
+			log.Println(color.RedString(err.Error()))
+		}
+		return false
+	}
+}
+
+func setupEngine(r *gin.Engine) *gin.Engine {
 	middleware.Setup(r)
 	routes.Setup(r)
-	s := &http.Server{
-		Addr:    ":" + strconv.Itoa(conf.Config.Port),
-		Handler: r,
-	}
-	return s
+	return r
 }
 
-func run(srv *http.Server) {
-	printInfo()
-	err := srv.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		log.Println(color.RedString(err.Error()))
+func snapshotFromGlobalConfig() runtimeconf.ConfigSnapshot {
+	return runtimeconf.ConfigSnapshot{
+		RootPath:      conf.Config.RootPath,
+		Port:          conf.Config.Port,
+		MaxLevel:      conf.Config.MaxLevel,
+		IsAllowUpload: conf.Config.IsAllowUpload,
+		IsSecure:      conf.Config.IsSecure,
+		IP:            conf.Config.IP,
+		Username:      conf.Config.Username,
+		PasswordHash:  conf.Config.Password,
+		SessionVal:    conf.Config.SessionVal,
 	}
-}
-
-func exit(srv *http.Server) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Println(color.RedString(err.Error()))
-	}
-	fmt.Println(color.GreenString("\nbye~"))
-	os.Exit(0)
 }
 
 // printInfo 会在程序启动后打印本机 IP、共享目录、是否允许上传的信息

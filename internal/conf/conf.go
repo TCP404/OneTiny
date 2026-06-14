@@ -48,13 +48,31 @@ type config struct {
 	Password   string // 访问登录的密码
 }
 
-func LoadConfig() error {
+func ConfigDir() (string, error) {
 	userCfgDir, err := os.UserConfigDir()
 	if err != nil {
-		return errors.New("获取配置目录失败")
+		return "", errors.New("获取配置目录失败")
 	}
-	cfgDir := filepath.Join(userCfgDir, "tiny")
-	cfgFile := filepath.Join(cfgDir, "config.yml")
+	return filepath.Join(userCfgDir, "tiny"), nil
+}
+
+func ConfigPath() (string, error) {
+	dir, err := ConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "config.yml"), nil
+}
+
+func LoadConfig() error {
+	cfgDir, err := ConfigDir()
+	if err != nil {
+		return err
+	}
+	cfgFile, err := ConfigPath()
+	if err != nil {
+		return err
+	}
 	err = loadUserConfig(cfgDir, cfgFile)
 	if err != nil {
 		return err
@@ -80,7 +98,7 @@ func LoadConfig() error {
 	Config.IsAllowUpload = viper.GetBool("server.allow_upload")
 	Config.IsSecure = viper.GetBool("account.secure")
 	Config.Username = viper.GetString("account.custom.user")
-	Config.Password = viper.GetString("account.custom.pass")
+	Config.Password = viper.GetString("account.custom.pass_hash")
 	return nil
 }
 

@@ -3,9 +3,9 @@ package verify
 import (
 	"errors"
 
+	"github.com/TCP404/OneTiny-cli/internal/conf"
+	"github.com/TCP404/OneTiny-cli/internal/security"
 	"github.com/TCP404/OneTiny-cli/pkg/container"
-	"github.com/TCP404/eutil"
-	"github.com/spf13/viper"
 )
 
 // ups 是 User、Pass、Secure 三个单词的首字母合并，
@@ -45,32 +45,50 @@ func NewUPSVerifier(weight uint8) *upsVerifier { return &upsVerifier{weight: ups
 // 设置密码时，需配置文件中已设置账户
 // 设置账户时，需配置文件中已设置密码
 func (u *upsVerifier) Handle() error {
+	credentials := conf.CredentialConfigFromViper()
+
 	switch u.weight {
 	case USER | PASS | SECU:
 		// 111 开启访问登录，并设置账户和密码
-		return nil
+		return validateCredentialsForSecureMode(credentials)
 	case USER | PASS:
 		// 110 设置账户和密码
 		return nil
 	case USER | SECU:
-		// 101 开启访问登录，并设置用户名，穿透下去检查是否有密码
-		fallthrough
+		// 101 开启访问登录，并设置用户名
+		return validateCredentialsForSecureMode(credentials)
 	case USER:
 		// 100 设置用户名，需配置文件中有密码
-		return eutil.If(viper.GetString("account.custom.pass") != "", nil, errors.New("未设置密码"))
+		if credentials.IsConfigured() {
+			return nil
+		}
+		return errors.New("未设置密码")
 	case PASS | SECU:
-		// 011 开启访问登录，并设置密码，穿透下去检查是否有帐户名
-		fallthrough
+		// 011 开启访问登录，并设置密码
+		return validateCredentialsForSecureMode(credentials)
 	case PASS:
 		// 010 设置密码，需配置文件中有账户名
-		return eutil.If(viper.GetString("account.custom.user") != "", nil, errors.New("未设置帐号"))
+		if credentials.Username != "" {
+			return nil
+		}
+		return errors.New("未设置帐号")
 	case SECU:
 		// 001 开启访问登录
-		return eutil.If(viper.GetString("account.custom.user") != "" && viper.GetString("account.custom.pass") != "", nil, errors.New("未设置帐号和密码"))
+		return validateCredentialsForSecureMode(credentials)
 	case 0:
 		// 000 打印当前是否开启访问登录
 		return nil
 	default:
 		return errors.New("设置失败～")
 	}
+}
+
+func validateCredentialsForSecureMode(credentials security.CredentialConfig) error {
+	if err := credentials.ValidateForSecureMode(); err != nil {
+		if errors.Is(err, security.ErrMissingCredentials) {
+			return errors.New("未设置帐号和密码")
+		}
+		return err
+	}
+	return nil
 }

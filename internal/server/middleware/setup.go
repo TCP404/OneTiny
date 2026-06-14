@@ -9,6 +9,7 @@ import (
 func Setup(r *gin.Engine) *gin.Engine {
 	r.Use(Logger(), gin.Recovery())
 	r.Use(enableCookieSession())
+	r.Use(AccessLog())
 	return r
 }
 

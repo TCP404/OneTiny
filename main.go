@@ -29,6 +29,10 @@ func main() {
 		return
 	}
 
+	if err = conf.ValidateSecureConfigFor(conf.Config.IsSecure); err != nil {
+		return
+	}
+
 	if err = container.NewHandleChain().
 		AddToHead(verify.NewPortVerifier(conf.Config.Port)).
 		AddToHead(verify.NewPathVerifier(conf.Config.RootPath)).
