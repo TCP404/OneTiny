@@ -1,0 +1,111 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  APP_NAME: OneTiny
+  CLI_NAME: onetiny-cli
+  FRONTEND_DIR: frontend
+  WAILS_VERSION: v3.0.0-alpha.98-tui
+
+jobs:
+  cli:
+    name: CLI ${{ matrix.target }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            goos: darwin
+            goarch: arm64
+            suffix: ""
+          - target: windows-amd64
+            goos: windows
+            goarch: amd64
+            suffix: ".exe"
+          - target: linux-amd64
+            goos: linux
+            goarch: amd64
+            suffix: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Build CLI
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p dist
+          go build \
+            -trimpath \
+            -ldflags "-s -w -X github.com/TCP404/OneTiny-cli/internal/constant.VERSION=${VERSION}" \
+            -o "dist/${CLI_NAME}-${{ matrix.target }}${{ matrix.suffix }}" \
+            .
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.CLI_NAME }}-${{ matrix.target }}
+          path: dist/${{ env.CLI_NAME }}-${{ matrix.target }}${{ matrix.suffix }}
+          if-no-files-found: error
+
+  mac-app:
+    name: macOS app
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Install build tools
+        run: |
+          brew install just librsvg
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}"
+
+      - name: Build macOS app
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: just package-mac
+
+      - name: Archive macOS app
+        run: |
+          mkdir -p dist
+          ditto -c -k --keepParent "build/bin/${APP_NAME}.app" "dist/${APP_NAME}-macos-arm64.app.zip"
+
+      - name: Upload macOS app artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.APP_NAME }}-macos-arm64-app
+          path: dist/${{ env.APP_NAME }}-macos-arm64.app.zip
+          if-no-files-found: error

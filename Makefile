@@ -38,16 +38,57 @@ endif
 GO_BUILD_FLAGS := -ldflags "$(GO_LDFLAGS)"
 
 ifeq ($(HOST_GOOS),darwin)
-	BUILD_TARGETS := frontend icons gui package
+	DEFAULT_BUILD_TARGET := package-mac
 else
-	BUILD_TARGETS := frontend icons gui
+	DEFAULT_BUILD_TARGET := build-gui
 endif
 
-.PHONY: all build frontend icons windows-resource gui cli package compress clean
+.DEFAULT_GOAL := help
+
+.PHONY: help all dev build release build-gui build-cli package-mac package-windows package-linux compress clean
+.PHONY: gui cli package frontend icons windows-resource
+
+help:
+	@printf "OneTiny Makefile\n"
+	@printf "\nUsage:\n"
+	@printf "  make <target>\n"
+	@printf "\nMain targets:\n"
+	@printf "  %-18s %s\n" "help" "显示这份命令说明"
+	@printf "  %-18s %s\n" "dev" "日常开发构建：只生成 GUI 二进制，不打包"
+	@printf "  %-18s %s\n" "build" "当前平台默认桌面产物；macOS 会生成 .app"
+	@printf "  %-18s %s\n" "release" "当前平台发布产物；Windows/Linux 暂时只生成 GUI 二进制"
+	@printf "\nBuild targets:\n"
+	@printf "  %-18s %s\n" "build-gui" "构建 GUI 二进制到 build/bin"
+	@printf "  %-18s %s\n" "build-cli" "构建 CLI 二进制到 build/bin"
+	@printf "\nPackage targets:\n"
+	@printf "  %-18s %s\n" "package-mac" "macOS: 生成 build/bin/OneTiny.app"
+	@printf "  %-18s %s\n" "package-windows" "Windows: 暂未实现安装包/压缩包"
+	@printf "  %-18s %s\n" "package-linux" "Linux: 暂未实现 AppImage/deb/rpm/tar.gz"
+	@printf "\nMaintenance:\n"
+	@printf "  %-18s %s\n" "compress" "用 UPX 压缩 GUI 二进制"
+	@printf "  %-18s %s\n" "clean" "清理 build/bin 和 Windows .syso 文件"
+	@printf "\nCompatibility aliases:\n"
+	@printf "  %-18s %s\n" "all" "等同 build"
+	@printf "  %-18s %s\n" "gui" "等同 build-gui"
+	@printf "  %-18s %s\n" "cli" "等同 build-cli"
+	@printf "  %-18s %s\n" "package" "等同 package-mac"
+	@printf "\nInternal targets:\n"
+	@printf "  %-18s %s\n" "frontend" "安装并构建前端资源"
+	@printf "  %-18s %s\n" "icons" "生成 macOS/Windows 图标资源"
+	@printf "  %-18s %s\n" "windows-resource" "生成 Windows .syso 资源"
 
 all: build
 
-build: $(BUILD_TARGETS)
+dev: build-gui
+
+build: $(DEFAULT_BUILD_TARGET)
+
+ifeq ($(HOST_GOOS),darwin)
+release: package-mac
+else
+release: build-gui
+	@echo "release: $(HOST_GOOS) package target is not implemented; produced $(GUI_BINARY)"
+endif
 
 frontend:
 	npm install --prefix $(FRONTEND_DIR)
@@ -66,16 +107,16 @@ $(RUNTIME_ICON): $(LOGO_SVG)
 windows-resource: icons
 	wails3 generate syso -arch $(GOARCH) -icon $(WINDOWS_ICON) -manifest $(WINDOWS_MANIFEST) -info $(WINDOWS_INFO) -out $(WINDOWS_SYSO)
 
-gui: icons $(GUI_DEPS)
+build-gui: frontend icons $(GUI_DEPS)
 	mkdir -p $(BIN_DIR)
 	go build $(GO_BUILD_FLAGS) -o $(GUI_BINARY) $(GUI_MAIN)
 
-cli:
+build-cli:
 	mkdir -p $(BIN_DIR)
 	go build $(GO_BUILD_FLAGS) -o $(CLI_BINARY) $(CLI_MAIN)
 
 ifeq ($(HOST_GOOS),darwin)
-package: gui icons
+package-mac: build-gui icons
 	rm -rf $(MAC_APP)
 	mkdir -p $(MAC_APP)/Contents/MacOS $(MAC_APP)/Contents/Resources
 	cp $(GUI_BINARY) $(MAC_APP)/Contents/MacOS/$(APP_NAME)
@@ -83,11 +124,26 @@ package: gui icons
 	cp build/darwin/Info.plist $(MAC_APP)/Contents/Info.plist
 	codesign --force --deep --sign - $(MAC_APP)
 else
-package:
-	@echo "package currently creates a macOS .app bundle and must be run on macOS"
+package-mac:
+	@echo "package-mac must be run on macOS"
+	@exit 1
 endif
 
-compress: gui
+package-windows:
+	@echo "package-windows is not implemented yet; use make build-gui to create $(GUI_BINARY)"
+	@exit 1
+
+package-linux:
+	@echo "package-linux is not implemented yet; use make build-gui to create $(GUI_BINARY)"
+	@exit 1
+
+gui: build-gui
+
+cli: build-cli
+
+package: package-mac
+
+compress: build-gui
 	$(UPX) $(UPX_FLAGS) $(GUI_BINARY)
 
 clean:
