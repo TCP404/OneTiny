@@ -1,0 +1,15 @@
+{
+  "fixed": {
+    "file_version": "0.6.0"
+  },
+  "info": {
+    "0000": {
+      "ProductVersion": "0.6.0",
+      "CompanyName": "Boii",
+      "FileDescription": "OneTiny 桌面控制面板",
+      "LegalCopyright": "Copyright (c) 2026 Boii",
+      "ProductName": "OneTiny",
+      "Comments": "局域网文件共享工具"
+    }
+  }
+}
