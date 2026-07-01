@@ -249,6 +249,7 @@ jobs:
           else
             gh release create "${RELEASE_TAG}" artifacts/* \
               --repo "${REPOSITORY}" \
+              --draft \
               --title "${RELEASE_TAG}" \
               --generate-notes
           fi
