@@ -1,35 +1,33 @@
 set dotenv-load := true
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-version          := env("VERSION", "v0.6.0")
-app_name         := "OneTiny"
-cli_name         := "onetiny-cli"
-bin_dir          := "build/bin"
-frontend_dir     := "frontend"
-logo_svg         := "README/logo.svg"
-appicon          := "build/appicon.png"
-runtime_icon     := "internal/gui/assets/appicon.png"
-mac_icon         := "build/darwin/icons.icns"
-windows_icon     := "build/windows/icon.ico"
-windows_manifest := "build/windows/wails.exe.manifest"
-windows_info     := "build/windows/info.json"
-gui_main         := "./cmd/onetiny-gui"
-cli_main         := "."
-
-upx         := env("UPX", "upx")
-upx_flags   := env("UPX_FLAGS", "--best")
-host_goos   := if os() == "macos" { "darwin" } else { os() }
+version := env("VERSION", "v0.6.0")
+app_name := "OneTiny"
+cli_name := "onetiny-cli"
+bin_dir := "build/bin"
+frontend_dir := "frontend"
+logo_svg := "README/logo.svg"
+appicon := "build/appicon.png"
+runtime_icon := "internal/gui/assets/appicon.png"
+mac_icon := "build/darwin/icons.icns"
+windows_icon := "build/windows/icon.ico"
+windows_manifest := "internal/gui/assets/windows/wails.exe.manifest"
+windows_info := "internal/gui/assets/windows/info.json"
+mac_info := "internal/gui/assets/darwin/Info.plist"
+gui_main := "./cmd/onetiny-gui"
+cli_main := "."
+upx := env("UPX", "upx")
+upx_flags := env("UPX_FLAGS", "--best")
+host_goos := if os() == "macos" { "darwin" } else { os() }
 target_goos := env("GOOS", host_goos)
-goarch      := env("GOARCH", `go env GOARCH`)
-
-exe_suffix           := if target_goos == "windows" { ".exe" } else { "" }
-windows_gui_ldflags  := if target_goos == "windows" { " -H windowsgui" } else { "" }
+goarch := env("GOARCH", `go env GOARCH`)
+exe_suffix := if target_goos == "windows" { ".exe" } else { "" }
+windows_gui_ldflags := if target_goos == "windows" { " -H windowsgui" } else { "" }
 default_build_recipe := if host_goos == "darwin" { if target_goos == "darwin" { "package-mac" } else { "build-gui" } } else { "build-gui" }
-
-go_ldflags   := f'-s -w -X github.com/TCP404/OneTiny-cli/internal/constant.VERSION={{version}}{{windows_gui_ldflags}}'
-gui_binary   := f'{{bin_dir}}/{{app_name}}{{exe_suffix}}'
-cli_binary   := f'{{bin_dir}}/{{cli_name}}{{exe_suffix}}'
-mac_app      := f'{{bin_dir}}/{{app_name}}.app'
+go_ldflags := f'-s -w -X github.com/TCP404/OneTiny-cli/internal/constant.VERSION={{version}}{{windows_gui_ldflags}}'
+gui_binary := f'{{bin_dir}}/{{app_name}}{{exe_suffix}}'
+cli_binary := f'{{bin_dir}}/{{cli_name}}{{exe_suffix}}'
+mac_app := f'{{bin_dir}}/{{app_name}}.app'
 windows_syso := f'cmd/onetiny-gui/rsrc_windows_{{goarch}}.syso'
 
 alias b := build
@@ -111,7 +109,7 @@ package-mac:
     mkdir -p "{{ mac_app }}/Contents/MacOS" "{{ mac_app }}/Contents/Resources"
     cp "{{ gui_binary }}" "{{ mac_app }}/Contents/MacOS/{{ app_name }}"
     cp "{{ mac_icon }}" "{{ mac_app }}/Contents/Resources/icons.icns"
-    cp build/darwin/Info.plist "{{ mac_app }}/Contents/Info.plist"
+    cp "{{ mac_info }}" "{{ mac_app }}/Contents/Info.plist"
     codesign --force --deep --sign - "{{ mac_app }}"
 
 [doc("Windows: package target is not implemented yet")]

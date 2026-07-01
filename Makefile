@@ -9,9 +9,10 @@ APPICON := build/appicon.png
 RUNTIME_ICON := internal/gui/assets/appicon.png
 MAC_ICON := build/darwin/icons.icns
 WINDOWS_ICON := build/windows/icon.ico
-WINDOWS_MANIFEST := build/windows/wails.exe.manifest
-WINDOWS_INFO := build/windows/info.json
+WINDOWS_MANIFEST := internal/gui/assets/windows/wails.exe.manifest
+WINDOWS_INFO := internal/gui/assets/windows/info.json
 WINDOWS_SYSO = cmd/onetiny-gui/rsrc_windows_$(GOARCH).syso
+MAC_INFO := internal/gui/assets/darwin/Info.plist
 MAC_APP := $(BIN_DIR)/$(APP_NAME).app
 
 GUI_MAIN := ./cmd/onetiny-gui
@@ -121,7 +122,7 @@ package-mac: build-gui icons
 	mkdir -p $(MAC_APP)/Contents/MacOS $(MAC_APP)/Contents/Resources
 	cp $(GUI_BINARY) $(MAC_APP)/Contents/MacOS/$(APP_NAME)
 	cp $(MAC_ICON) $(MAC_APP)/Contents/Resources/icons.icns
-	cp build/darwin/Info.plist $(MAC_APP)/Contents/Info.plist
+	cp $(MAC_INFO) $(MAC_APP)/Contents/Info.plist
 	codesign --force --deep --sign - $(MAC_APP)
 else
 package-mac:
