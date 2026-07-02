@@ -3,7 +3,7 @@ module github.com/TCP404/OneTiny-cli
 go 1.26
 
 require (
-	github.com/TCP404/eutil v0.0.5
+	github.com/TCP404/eutil v0.0.11
 	github.com/fatih/color v1.18.0
 	github.com/gin-contrib/sessions v0.0.5
 	github.com/gin-gonic/gin v1.7.7
