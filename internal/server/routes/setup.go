@@ -21,5 +21,6 @@ func Setup(r *gin.Engine) *gin.Engine {
 	loadLoginRoute(r)
 	load404Route(r)
 	loadICORoute(r)
+	loadLogoRoute(r)
 	return r
 }

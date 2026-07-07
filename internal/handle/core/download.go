@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -30,6 +31,13 @@ type fileStructure struct {
 	URLRelPath    string
 	Name          string
 }
+
+type pathCrumb struct {
+	Name    string
+	URL     string
+	Current bool
+}
+
 type agent struct {
 	abs         string
 	rel         string
@@ -171,9 +179,10 @@ func (a *agent) dir(c *gin.Context) {
 func (a *agent) readDir(c *gin.Context) {
 	files := getFileInfos(c, a.rootPath, a.abs)
 	c.HTML(http.StatusOK, "list.tpl", gin.H{
-		"pathTitle": a.rel,
-		"upload":    a.allowUpload,
-		"files":     files,
+		"pathTitle":   a.rel,
+		"breadcrumbs": buildBreadcrumbs(a.rel),
+		"upload":      a.allowUpload,
+		"files":       files,
 	})
 }
 
@@ -211,7 +220,41 @@ func getFileInfos(c *gin.Context, rootPath, absPath string) []fileStructure {
 			IsDir:         isDir,
 		}
 	}
+	sort.SliceStable(fileInfos, func(i, j int) bool {
+		if fileInfos[i].IsDir != fileInfos[j].IsDir {
+			return fileInfos[i].IsDir
+		}
+		return strings.ToLower(fileInfos[i].Name) < strings.ToLower(fileInfos[j].Name)
+	})
 	return fileInfos
+}
+
+func buildBreadcrumbs(rel string) []pathCrumb {
+	cleanRel := strings.Trim(filepath.ToSlash(rel), "/")
+	if cleanRel == "" || rel == constant.ROOT {
+		return []pathCrumb{{
+			Name:    "根目录",
+			URL:     constant.FileGroupPrefix + "/?action=view",
+			Current: true,
+		}}
+	}
+
+	parts := strings.Split(cleanRel, "/")
+	crumbs := make([]pathCrumb, 0, len(parts)+1)
+	crumbs = append(crumbs, pathCrumb{
+		Name: "根目录",
+		URL:  constant.FileGroupPrefix + "/?action=view",
+	})
+
+	for i, part := range parts {
+		joined := path.Join(parts[:i+1]...)
+		crumbs = append(crumbs, pathCrumb{
+			Name:    part,
+			URL:     path.Join(constant.FileGroupPrefix, joined) + "/?action=view",
+			Current: i == len(parts)-1,
+		})
+	}
+	return crumbs
 }
 
 func (a *agent) flush(c *gin.Context, src io.Reader, buf []byte) error {
