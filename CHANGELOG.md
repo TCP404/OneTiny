@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.0](https://github.com/tcp404/OneTiny/compare/v0.6.2...v0.7.0) (2026-07-07)
+
+
+### Features
+
+* **gui:** enforce single instance ([22e2195](https://github.com/tcp404/OneTiny/commit/22e2195a87bc90abaa12069ca863b98c001e09b8))
+* **gui:** enforce single instance ([76f8b98](https://github.com/tcp404/OneTiny/commit/76f8b9896245febafab57ced4a47dba3b0906d3e))
+
 ## [0.6.2](https://github.com/TCP404/OneTiny/compare/v0.6.1...v0.6.2) (2026-07-02)
 
 
