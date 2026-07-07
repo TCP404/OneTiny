@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/tcp404/OneTiny/compare/v0.7.0...v0.8.0) (2026-07-07)
+
+
+### Features
+
+* **web:** polish file browser page ([0be1905](https://github.com/tcp404/OneTiny/commit/0be190572ff7ebe1326b359942c410b56ee5fce0))
+* **web:** polish file browser page ([ada7dc3](https://github.com/tcp404/OneTiny/commit/ada7dc3b268177b25aa2484a67d90ab533c5e234))
+
 ## [0.7.0](https://github.com/tcp404/OneTiny/compare/v0.6.2...v0.7.0) (2026-07-07)
 
 
