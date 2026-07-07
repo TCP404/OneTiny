@@ -10,12 +10,21 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
+const singleInstanceID = "com.tcp404.onetiny.gui"
+
 func Run(assets embed.FS) error {
 	controller := control.NewController()
 	service := NewService(controller, nil)
 	var quitting atomic.Bool
 
 	var app *application.App
+	var window application.Window
+	openPanel := func() {
+		if window == nil {
+			return
+		}
+		window.Show().Focus()
+	}
 	app = application.New(newApplicationOptions(service, assets, func() bool {
 		if !quitting.Load() && !service.requestQuit(func() {
 			quitting.Store(true)
@@ -26,10 +35,10 @@ func Run(assets embed.FS) error {
 		quitting.Store(true)
 		service.shutdown()
 		return true
-	}, service.shutdown))
+	}, service.shutdown, openPanel))
 	app.SetIcon(appIcon)
 
-	window := app.Window.NewWithOptions(newMainWindowOptions())
+	window = app.Window.NewWithOptions(newMainWindowOptions())
 	service.setDialogAdapter(NewWailsDialogAdapter(app, window))
 
 	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
@@ -40,9 +49,6 @@ func Run(assets embed.FS) error {
 		window.Hide()
 	})
 
-	openPanel := func() {
-		window.Show().Focus()
-	}
 	quit := func() {
 		if !service.requestQuit(func() {
 			quitting.Store(true)
@@ -76,7 +82,7 @@ func Run(assets embed.FS) error {
 	return app.Run()
 }
 
-func newApplicationOptions(service *Service, assets fs.FS, shouldQuit func() bool, onShutdown func()) application.Options {
+func newApplicationOptions(service *Service, assets fs.FS, shouldQuit func() bool, onShutdown func(), onSecondInstanceLaunch func()) application.Options {
 	return application.Options{
 		Name:        "OneTiny",
 		Description: "OneTiny 桌面控制面板",
@@ -103,6 +109,14 @@ func newApplicationOptions(service *Service, assets fs.FS, shouldQuit func() boo
 			return true
 		},
 		OnShutdown: onShutdown,
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: singleInstanceID,
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
+				if onSecondInstanceLaunch != nil {
+					onSecondInstanceLaunch()
+				}
+			},
+		},
 	}
 }
 
