@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"flag"
+	"log"
+	"strings"
 	"testing"
 
+	"github.com/fatih/color"
 	"github.com/tcp404/OneTiny/internal/runtime"
 	"github.com/urfave/cli/v2"
 )
@@ -32,5 +36,36 @@ func TestRootActionAppliesScratchFlagsToRuntimeOnly(t *testing.T) {
 	snapshot := rt.Snapshot()
 	if snapshot.ScratchMaxItems != 77 || snapshot.ScratchMaxItemSize != "7MB" || snapshot.ScratchMaxItemBytes != 7*1024*1024 {
 		t.Fatalf("scratch runtime = %+v", snapshot)
+	}
+}
+
+func TestPrintInfoAlwaysShowsScratchURLWithFallbackHost(t *testing.T) {
+	var buf bytes.Buffer
+	oldLogWriter := log.Writer()
+	oldColorOutput := color.Output
+	oldNoColor := color.NoColor
+	log.SetOutput(&buf)
+	color.Output = &buf
+	color.NoColor = true
+	t.Cleanup(func() {
+		log.SetOutput(oldLogWriter)
+		color.Output = oldColorOutput
+		color.NoColor = oldNoColor
+	})
+
+	printInfo(runtime.Snapshot{
+		Port:               8192,
+		IP:                 "",
+		RootPath:           "/tmp/root",
+		ScratchMaxItems:    500,
+		ScratchMaxItemSize: "10MB",
+	})
+
+	output := buf.String()
+	if !strings.Contains(output, "/scratch/") {
+		t.Fatalf("printInfo output missing scratch path: %q", output)
+	}
+	if !strings.Contains(output, "127.0.0.1:8192") {
+		t.Fatalf("printInfo output missing fallback host: %q", output)
 	}
 }

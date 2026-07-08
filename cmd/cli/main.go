@@ -91,6 +91,10 @@ func runtimeConfigFromConfig(cfg config.Config) runtime.PersistentConfig {
 
 func printInfo(snapshot runtime.Snapshot) {
 	log.SetOutput(color.Output)
+	host := snapshot.IP
+	if host == "" {
+		host = "127.0.0.1"
+	}
 	if snapshot.IP != "" {
 		log.Printf("Run on   [ %s ]", color.BlueString("http://%s:%d", snapshot.IP, snapshot.Port))
 	} else {
@@ -98,9 +102,7 @@ func printInfo(snapshot runtime.Snapshot) {
 	}
 
 	log.Printf("Run with [ %s ]", color.BlueString("%s", snapshot.RootPath))
-	if snapshot.IP != "" {
-		log.Printf("Scratch list [ %s ]", color.BlueString("http://%s:%d/scratch/", snapshot.IP, snapshot.Port))
-	}
+	log.Printf("Scratch list [ %s ]", color.BlueString("http://%s:%d/scratch/", host, snapshot.Port))
 	log.Printf("Scratch items: [ %s ]", color.BlueString("%d", snapshot.ScratchMaxItems))
 	log.Printf("Scratch item size: [ %s ]", color.BlueString("%s", snapshot.ScratchMaxItemSize))
 	log.Printf("Allow access level: [ %s ]", color.BlueString("%d", snapshot.MaxLevel))
