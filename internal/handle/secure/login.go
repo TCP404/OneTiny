@@ -3,12 +3,12 @@ package secure
 import (
 	"net/http"
 
-	"github.com/TCP404/OneTiny-cli/internal/accesslog"
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
-	"github.com/TCP404/OneTiny-cli/internal/security"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/security"
 )
 
 // LoginGet 接收 GET /login 请求,返回登录页面

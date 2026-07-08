@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/TCP404/OneTiny-cli/internal/constant"
-	"github.com/TCP404/eutil"
 	"github.com/fatih/color"
 	"github.com/spf13/viper"
+	"github.com/tcp404/OneTiny/internal/constant"
+	"github.com/tcp404/eutil"
 )
 
 var Config = &config{

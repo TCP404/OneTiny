@@ -1,15 +1,15 @@
-module github.com/TCP404/OneTiny-cli
+module github.com/tcp404/OneTiny
 
 go 1.26
 
 require (
-	github.com/TCP404/eutil v0.0.11
 	github.com/fatih/color v1.18.0
 	github.com/gin-contrib/sessions v0.0.5
 	github.com/gin-gonic/gin v1.7.7
 	github.com/parnurzeal/gorequest v0.2.16
 	github.com/schollz/progressbar/v3 v3.8.6
 	github.com/spf13/viper v1.12.0
+	github.com/tcp404/eutil v0.0.12
 	github.com/urfave/cli/v2 v2.8.1
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.98-tui
 	golang.org/x/crypto v0.50.0

@@ -10,53 +10,53 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as control$0 from "../control/models.js";
 
 export function ChooseDirectory(current: string): $CancellablePromise<string> {
-    return $Call.ByName("github.com/TCP404/OneTiny-cli/internal/gui.Service.ChooseDirectory", current);
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ChooseDirectory", current);
 }
 
 export function ClearLogs(): $CancellablePromise<void> {
-    return $Call.ByName("github.com/TCP404/OneTiny-cli/internal/gui.Service.ClearLogs");
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ClearLogs");
 }
 
 export function ExportLogs(filter: control$0.LogFilterDTO): $CancellablePromise<string> {
-    return $Call.ByName("github.com/TCP404/OneTiny-cli/internal/gui.Service.ExportLogs", filter);
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ExportLogs", filter);
 }
 
 export function GetLogs(filter: control$0.LogFilterDTO): $CancellablePromise<control$0.LogEntryDTO[]> {
-    return $Call.ByName("github.com/TCP404/OneTiny-cli/internal/gui.Service.GetLogs", filter).then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.GetLogs", filter).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
 export function GetStatus(): $CancellablePromise<control$0.StatusDTO> {
-    return $Call.ByName("github.com/TCP404/OneTiny-cli/internal/gui.Service.GetStatus").then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.GetStatus").then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 export function OpenConfigDir(): $CancellablePromise<void> {
-    return $Call.ByName("github.com/TCP404/OneTiny-cli/internal/gui.Service.OpenConfigDir");
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.OpenConfigDir");
 }
 
 export function SetCredentials(patch: control$0.CredentialPatchDTO): $CancellablePromise<control$0.StatusDTO> {
-    return $Call.ByName("github.com/TCP404/OneTiny-cli/internal/gui.Service.SetCredentials", patch).then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.SetCredentials", patch).then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 export function StartSharing(): $CancellablePromise<control$0.StatusDTO> {
-    return $Call.ByName("github.com/TCP404/OneTiny-cli/internal/gui.Service.StartSharing").then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.StartSharing").then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 export function StopSharing(): $CancellablePromise<control$0.StatusDTO> {
-    return $Call.ByName("github.com/TCP404/OneTiny-cli/internal/gui.Service.StopSharing").then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.StopSharing").then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 export function UpdateConfig(patch: control$0.ConfigPatchDTO): $CancellablePromise<control$0.StatusDTO> {
-    return $Call.ByName("github.com/TCP404/OneTiny-cli/internal/gui.Service.UpdateConfig", patch).then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.UpdateConfig", patch).then(($result: any) => {
         return $$createType2($result);
     });
 }

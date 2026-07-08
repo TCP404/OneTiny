@@ -1,6 +1,6 @@
 package constant
 
-import "github.com/TCP404/eutil"
+import "github.com/tcp404/eutil"
 
 var VERSION string
 
@@ -21,9 +21,9 @@ const (
 )
 
 const (
-	VersionListURL   = "https://api.github.com/repos/TCP404/OneTiny/tags"
-	VersionLatestURL = "https://api.github.com/repos/TCP404/OneTiny/releases/latest"
-	VersionByTagURL  = "https://api.github.com/repos/TCP404/OneTiny/releases/tags/"
+	VersionListURL   = "https://api.github.com/repos/tcp404/OneTiny/tags"
+	VersionLatestURL = "https://api.github.com/repos/tcp404/OneTiny/releases/latest"
+	VersionByTagURL  = "https://api.github.com/repos/tcp404/OneTiny/releases/tags/"
 )
 
 var (

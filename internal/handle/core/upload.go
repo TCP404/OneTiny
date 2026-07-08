@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TCP404/OneTiny-cli/internal/accesslog"
-	"github.com/TCP404/OneTiny-cli/internal/constant"
-	"github.com/TCP404/OneTiny-cli/internal/handle"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/constant"
+	"github.com/tcp404/OneTiny/internal/handle"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 )
 
 func Uploader(c *gin.Context) {

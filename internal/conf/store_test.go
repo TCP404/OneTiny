@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TCP404/OneTiny-cli/internal/security"
 	"github.com/spf13/viper"
+	"github.com/tcp404/OneTiny/internal/security"
 )
 
 const validBcryptHash = "$2a$10$7EqJtq98hPqEX7fNZaFWoOhi47OhMKn8IW0YFDCw5Ac1TYT2RP1xG"

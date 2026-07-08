@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 )
 
 func resetMiddlewareRuntimeTest(t *testing.T) {

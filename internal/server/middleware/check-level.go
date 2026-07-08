@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TCP404/OneTiny-cli/internal/constant"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/constant"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 
 	"github.com/gin-gonic/gin"
 )

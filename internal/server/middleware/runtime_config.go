@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 )
 
 func currentSnapshot() runtimeconf.ConfigSnapshot {

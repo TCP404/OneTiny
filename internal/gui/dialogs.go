@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
+	"github.com/tcp404/OneTiny/internal/conf"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 

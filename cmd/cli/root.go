@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/constant"
-	"github.com/TCP404/OneTiny-cli/internal/kit/verify"
-	"github.com/TCP404/OneTiny-cli/pkg/container"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/constant"
+	"github.com/tcp404/OneTiny/internal/kit/chain"
+	"github.com/tcp404/OneTiny/internal/kit/verify"
 
 	"github.com/urfave/cli/v2"
 )
@@ -57,7 +57,7 @@ func CLI() *cli.App {
 }
 
 func afterRootAction(c *cli.Context) error {
-	return container.NewHandleChain().
+	return chain.NewHandleChain().
 		AddToHead(verify.NewPortVerifier(conf.Config.Port)).
 		AddToHead(verify.NewPathVerifier(conf.Config.RootPath)).
 		Iterator()

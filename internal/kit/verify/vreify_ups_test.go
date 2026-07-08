@@ -3,8 +3,8 @@ package verify
 import (
 	"testing"
 
-	"github.com/TCP404/OneTiny-cli/internal/security"
 	"github.com/spf13/viper"
+	"github.com/tcp404/OneTiny/internal/security"
 )
 
 func resetUPSTestViper(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/TCP404/OneTiny-cli/internal/accesslog"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/accesslog"
 )
 
 func TestAccessLogClassifiesSuccessRejectAndErrorEvents(t *testing.T) {

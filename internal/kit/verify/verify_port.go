@@ -4,17 +4,17 @@ import (
 	"errors"
 	"runtime"
 
-	"github.com/TCP404/OneTiny-cli/pkg/container"
 	"github.com/fatih/color"
+	"github.com/tcp404/OneTiny/internal/kit/chain"
 )
 
 type portVerifier struct {
 	port int
 }
 
-var _ container.Handler = (*portVerifier)(nil)
+var _ chain.Handler = (*portVerifier)(nil)
 
-func NewPortVerifier(port int) container.Handler { return &portVerifier{port: port} }
+func NewPortVerifier(port int) chain.Handler { return &portVerifier{port: port} }
 
 // portHandler.Handle 负责校验用户指定的端口号是否在合法范围内。
 // 对于 unix 系列的操作系统，端口允许范围在 [1024,65535]；

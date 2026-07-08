@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 )
 
 var (

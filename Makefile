@@ -11,17 +11,17 @@ MAC_ICON := build/darwin/icons.icns
 WINDOWS_ICON := build/windows/icon.ico
 WINDOWS_MANIFEST := internal/gui/assets/windows/wails.exe.manifest
 WINDOWS_INFO := internal/gui/assets/windows/info.json
-WINDOWS_SYSO = cmd/onetiny-gui/rsrc_windows_$(GOARCH).syso
+WINDOWS_SYSO = cmd/gui/rsrc_windows_$(GOARCH).syso
 MAC_INFO := internal/gui/assets/darwin/Info.plist
 MAC_APP := $(BIN_DIR)/$(APP_NAME).app
 
-GUI_MAIN := ./cmd/onetiny-gui
-CLI_MAIN := .
+GUI_MAIN := ./cmd/gui
+CLI_MAIN := ./cmd/cli
 
 GOARCH ?= $(shell go env GOARCH)
 HOST_GOOS := $(shell go env GOOS)
 
-GO_LDFLAGS := -s -w -X github.com/TCP404/OneTiny-cli/internal/constant.VERSION=$(VERSION)
+GO_LDFLAGS := -s -w -X github.com/tcp404/OneTiny/internal/constant.VERSION=$(VERSION)
 UPX ?= upx
 UPX_FLAGS ?= --best
 
@@ -149,4 +149,4 @@ compress: build-gui
 
 clean:
 	rm -rf $(BIN_DIR)
-	rm -f cmd/onetiny-gui/*.syso
+	rm -f cmd/gui/*.syso

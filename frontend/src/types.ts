@@ -1,58 +1,23 @@
-export interface ConfigDTO {
-  rootPath: string;
-  port: number;
-  maxLevel: number;
-  isAllowUpload: boolean;
-  isSecure: boolean;
-}
+import type {
+  ConfigPatchDTO,
+  CredentialPatchDTO,
+  LogEntryDTO,
+  LogFilterDTO,
+  StatusDTO,
+} from "../bindings/github.com/tcp404/OneTiny/internal/control/models.js";
+
+export type {
+  ConfigDTO,
+  ConfigPatchDTO,
+  CredentialPatchDTO,
+  LogEntryDTO,
+  LogFilterDTO,
+  StatusDTO,
+} from "../bindings/github.com/tcp404/OneTiny/internal/control/models.js";
 
 export type TabKey = "panel" | "security" | "logs" | "about";
 
 export type AppMode = "browser-preview" | "wails-desktop";
-
-export interface StatusDTO {
-  running: boolean;
-  stateLabel: string;
-  address: string;
-  config: ConfigDTO;
-  hasCredentials: boolean;
-  configPath: string;
-  accessLogPath: string;
-  portRestartRequired: boolean;
-  lastError: string;
-}
-
-export interface ConfigPatchDTO {
-  rootPath?: string;
-  port?: number;
-  maxLevel?: number;
-  isAllowUpload?: boolean;
-  isSecure?: boolean;
-  restartPort?: boolean;
-}
-
-export interface CredentialPatchDTO {
-  username: string;
-  password: string;
-  confirmPassword: string;
-  enableSecure: boolean;
-}
-
-export interface LogFilterDTO {
-  event?: string;
-  since?: string | null;
-  until?: string | null;
-}
-
-export interface LogEntryDTO {
-  time: string;
-  clientIP: string;
-  method: string;
-  event: string;
-  path: string;
-  status: number;
-  result: string;
-}
 
 export interface OneTinyService {
   GetStatus(): Promise<StatusDTO>;

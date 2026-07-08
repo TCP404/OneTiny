@@ -118,7 +118,7 @@ frontend/node_modules/
 /onetiny-gui
 bin/
 build/bin/
-cmd/onetiny-gui/*.syso
+cmd/gui/*.syso
 
 # temporary files which can be created if a process still has a handle open of a deleted file
 .fuse_hidden*
@@ -257,3 +257,4 @@ exe/
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,visualstudiocode,goland,sublimetext
 .playwright-mcp/
 build/
+superpowers/

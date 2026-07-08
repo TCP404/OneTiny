@@ -9,13 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TCP404/OneTiny-cli/internal/accesslog"
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
-	"github.com/TCP404/OneTiny-cli/internal/security"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/security"
 )
 
 func resetLoginTestConfig(t *testing.T) *accesslog.Logger {

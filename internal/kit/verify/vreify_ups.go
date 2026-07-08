@@ -3,9 +3,9 @@ package verify
 import (
 	"errors"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/security"
-	"github.com/TCP404/OneTiny-cli/pkg/container"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/kit/chain"
+	"github.com/tcp404/OneTiny/internal/security"
 )
 
 // ups 是 User、Pass、Secure 三个单词的首字母合并，
@@ -26,7 +26,7 @@ type upsVerifier struct {
 	weight ups
 }
 
-var _ container.Handler = (*upsVerifier)(nil)
+var _ chain.Handler = (*upsVerifier)(nil)
 
 func NewUPSVerifier(weight uint8) *upsVerifier { return &upsVerifier{weight: ups(weight)} }
 

@@ -258,7 +258,7 @@ func loginSnapshot() loginCredentialSnapshot {
 Add the missing import:
 
 ```go
-"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
+"github.com/tcp404/OneTiny-cli/internal/runtimeconf"
 ```
 
 - [ ] **Step 6: Add manager lifecycle helper tests**
@@ -407,8 +407,8 @@ package control
 import (
 	"testing"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
+	"github.com/tcp404/OneTiny-cli/internal/conf"
+	"github.com/tcp404/OneTiny-cli/internal/runtimeconf"
 )
 
 func TestControllerStartStopAndStatus(t *testing.T) {
@@ -539,11 +539,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TCP404/OneTiny-cli/internal/accesslog"
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
-	"github.com/TCP404/OneTiny-cli/internal/security"
-	"github.com/TCP404/OneTiny-cli/internal/server"
+	"github.com/tcp404/OneTiny-cli/internal/accesslog"
+	"github.com/tcp404/OneTiny-cli/internal/conf"
+	"github.com/tcp404/OneTiny-cli/internal/runtimeconf"
+	"github.com/tcp404/OneTiny-cli/internal/security"
+	"github.com/tcp404/OneTiny-cli/internal/server"
 	"github.com/spf13/viper"
 )
 
@@ -982,7 +982,7 @@ Create `internal/gui/service.go`:
 ```go
 package gui
 
-import "github.com/TCP404/OneTiny-cli/internal/control"
+import "github.com/tcp404/OneTiny-cli/internal/control"
 
 type Service struct {
 	controller *control.Controller
@@ -1052,7 +1052,7 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
+	"github.com/tcp404/OneTiny-cli/internal/conf"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -1113,7 +1113,7 @@ package gui
 import (
 	"embed"
 
-	"github.com/TCP404/OneTiny-cli/internal/control"
+	"github.com/tcp404/OneTiny-cli/internal/control"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/icons"
@@ -1184,9 +1184,9 @@ package main
 import (
 	"log"
 
-	"github.com/TCP404/OneTiny-cli/frontend"
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/gui"
+	"github.com/tcp404/OneTiny-cli/frontend"
+	"github.com/tcp404/OneTiny-cli/internal/conf"
+	"github.com/tcp404/OneTiny-cli/internal/gui"
 )
 
 func main() {

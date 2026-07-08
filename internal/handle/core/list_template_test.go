@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TCP404/OneTiny-cli/resource"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/resource"
 )
 
 func TestListTemplateRendersPolishedFileBrowserControls(t *testing.T) {

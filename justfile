@@ -14,8 +14,8 @@ windows_icon := "build/windows/icon.ico"
 windows_manifest := "internal/gui/assets/windows/wails.exe.manifest"
 windows_info := "internal/gui/assets/windows/info.json"
 mac_info := "internal/gui/assets/darwin/Info.plist"
-gui_main := "./cmd/onetiny-gui"
-cli_main := "."
+gui_main := "./cmd/gui"
+cli_main := "./cmd/cli"
 upx := env("UPX", "upx")
 upx_flags := env("UPX_FLAGS", "--best")
 host_goos := if os() == "macos" { "darwin" } else { os() }
@@ -24,11 +24,11 @@ goarch := env("GOARCH", `go env GOARCH`)
 exe_suffix := if target_goos == "windows" { ".exe" } else { "" }
 windows_gui_ldflags := if target_goos == "windows" { " -H windowsgui" } else { "" }
 default_build_recipe := if host_goos == "darwin" { if target_goos == "darwin" { "package-mac" } else { "build-gui" } } else { "build-gui" }
-go_ldflags := f'-s -w -X github.com/TCP404/OneTiny-cli/internal/constant.VERSION={{version}}{{windows_gui_ldflags}}'
+go_ldflags := f'-s -w -X github.com/tcp404/OneTiny/internal/constant.VERSION={{version}}{{windows_gui_ldflags}}'
 gui_binary := f'{{bin_dir}}/{{app_name}}{{exe_suffix}}'
 cli_binary := f'{{bin_dir}}/{{cli_name}}{{exe_suffix}}'
 mac_app := f'{{bin_dir}}/{{app_name}}.app'
-windows_syso := f'cmd/onetiny-gui/rsrc_windows_{{goarch}}.syso'
+windows_syso := f'cmd/gui/rsrc_windows_{{goarch}}.syso'
 
 alias b := build
 alias d := dev
@@ -133,7 +133,7 @@ compress: build-gui
 [group("Maintenance")]
 clean:
     rm -rf "{{ bin_dir }}"
-    rm -f cmd/onetiny-gui/*.syso
+    rm -f cmd/gui/*.syso
 
 [private]
 _frontend:
