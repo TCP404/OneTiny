@@ -36,7 +36,7 @@ OneTiny 当前以 `RootPath` 下的文件和目录为共享对象。用户在不
 新增 `internal/scratch/` 包，职责是内存列表领域逻辑：
 
 - item 模型。
-- 内容 hash。
+- 内容 hash ID。
 - 去重提顶。
 - 容量淘汰。
 - 单条大小校验。
@@ -70,7 +70,6 @@ type Item struct {
     MimeType  string
     Data      []byte
     Size      int64
-    Hash      string
     CreatedAt time.Time
     UpdatedAt time.Time
 }
@@ -88,7 +87,7 @@ type Item struct {
 - `image/gif`
 - `image/webp`
 
-hash 使用 `sha256(kind + mimeType + data)`。这样可以避免不同类型但 bytes 相同的内容被错误合并。
+`ID` 使用完整内容 hash：`sha256(kind + mimeType + data)` 的十六进制字符串。这样 URL 中的 `:id` 可直接作为稳定内容标识，也可以避免不同类型但 bytes 相同的内容被错误合并。
 
 ## 排序、去重和淘汰
 
@@ -97,9 +96,9 @@ hash 使用 `sha256(kind + mimeType + data)`。这样可以避免不同类型但
 新增内容时：
 
 1. 校验 kind、MIME 和大小。
-2. 计算 hash。
-3. 如果 hash 已存在，不新增 item，把已有 item 提到顶部，并刷新 `UpdatedAt`。
-4. 如果 hash 不存在，创建 item 并放到顶部。
+2. 计算内容 hash 作为 item ID。
+3. 如果 ID 已存在，不新增 item，把已有 item 提到顶部，并刷新 `UpdatedAt`。
+4. 如果 ID 不存在，创建 item 并放到顶部。
 5. 如果总数超过容量，从底部淘汰最旧 item。
 
 示例：依次提交 `1 2 3 4 5 4 2`，页面从上到下显示 `2 4 5 3 1`。
@@ -112,7 +111,7 @@ hash 使用 `sha256(kind + mimeType + data)`。这样可以避免不同类型但
 
 - `GET /scratch/`：渲染临时列表页面。
 - `POST /scratch/items`：新增文本或图片。
-- `GET /scratch/items/:id`：返回原始内容。
+- `GET /scratch/items/:id`：按内容 hash ID 返回原始内容。
 
 `POST /scratch/items` 支持 multipart/form-data：
 
@@ -268,7 +267,7 @@ Wails binding 需要重新生成，`frontend/bindings/` 不手改。
 
 - 新增文本。
 - 新增图片。
-- 重复 hash 提到顶部。
+- 重复内容 ID 提到顶部。
 - 容量淘汰底部 item。
 - 单条大小超限拒绝。
 - 不支持 MIME 拒绝。
