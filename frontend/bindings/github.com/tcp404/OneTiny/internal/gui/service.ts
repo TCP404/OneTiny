@@ -3,65 +3,65 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "/wails/runtime.js";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as control$0 from "../control/models.js";
+import * as app$0 from "../app/models.js";
 
 export function ChooseDirectory(current: string): $CancellablePromise<string> {
-    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ChooseDirectory", current);
+    return $Call.ByID(2271257277, current);
 }
 
 export function ClearLogs(): $CancellablePromise<void> {
-    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ClearLogs");
+    return $Call.ByID(717304023);
 }
 
-export function ExportLogs(filter: control$0.LogFilterDTO): $CancellablePromise<string> {
-    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ExportLogs", filter);
+export function ExportLogs(filter: app$0.LogFilterDTO): $CancellablePromise<string> {
+    return $Call.ByID(2943527410, filter);
 }
 
-export function GetLogs(filter: control$0.LogFilterDTO): $CancellablePromise<control$0.LogEntryDTO[]> {
-    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.GetLogs", filter).then(($result: any) => {
+export function GetLogs(filter: app$0.LogFilterDTO): $CancellablePromise<app$0.LogEntryDTO[]> {
+    return $Call.ByID(4012054750, filter).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
-export function GetStatus(): $CancellablePromise<control$0.StatusDTO> {
-    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.GetStatus").then(($result: any) => {
+export function GetStatus(): $CancellablePromise<app$0.StatusDTO> {
+    return $Call.ByID(3149098951).then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 export function OpenConfigDir(): $CancellablePromise<void> {
-    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.OpenConfigDir");
+    return $Call.ByID(644463484);
 }
 
-export function SetCredentials(patch: control$0.CredentialPatchDTO): $CancellablePromise<control$0.StatusDTO> {
-    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.SetCredentials", patch).then(($result: any) => {
+export function SetCredentials(patch: app$0.CredentialPatchDTO): $CancellablePromise<app$0.StatusDTO> {
+    return $Call.ByID(306194325, patch).then(($result: any) => {
         return $$createType2($result);
     });
 }
 
-export function StartSharing(): $CancellablePromise<control$0.StatusDTO> {
-    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.StartSharing").then(($result: any) => {
+export function StartSharing(): $CancellablePromise<app$0.StatusDTO> {
+    return $Call.ByID(3556961239).then(($result: any) => {
         return $$createType2($result);
     });
 }
 
-export function StopSharing(): $CancellablePromise<control$0.StatusDTO> {
-    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.StopSharing").then(($result: any) => {
+export function StopSharing(): $CancellablePromise<app$0.StatusDTO> {
+    return $Call.ByID(2713997397).then(($result: any) => {
         return $$createType2($result);
     });
 }
 
-export function UpdateConfig(patch: control$0.ConfigPatchDTO): $CancellablePromise<control$0.StatusDTO> {
-    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.UpdateConfig", patch).then(($result: any) => {
+export function UpdateConfig(patch: app$0.ConfigPatchDTO): $CancellablePromise<app$0.StatusDTO> {
+    return $Call.ByID(2775678876, patch).then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 // Private type creation functions
-const $$createType0 = control$0.LogEntryDTO.createFrom;
+const $$createType0 = app$0.LogEntryDTO.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = control$0.StatusDTO.createFrom;
+const $$createType2 = app$0.StatusDTO.createFrom;

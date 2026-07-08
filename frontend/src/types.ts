@@ -4,7 +4,7 @@ import type {
   LogEntryDTO,
   LogFilterDTO,
   StatusDTO,
-} from "../bindings/github.com/tcp404/OneTiny/internal/control/models.js";
+} from "../bindings/github.com/tcp404/OneTiny/internal/app/models.js";
 
 export type {
   ConfigDTO,
@@ -13,7 +13,7 @@ export type {
   LogEntryDTO,
   LogFilterDTO,
   StatusDTO,
-} from "../bindings/github.com/tcp404/OneTiny/internal/control/models.js";
+} from "../bindings/github.com/tcp404/OneTiny/internal/app/models.js";
 
 export type TabKey = "panel" | "security" | "logs" | "about";
 
