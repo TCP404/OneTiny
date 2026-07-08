@@ -59,6 +59,8 @@ func TestListTemplateRendersPolishedFileBrowserControls(t *testing.T) {
 	assertContains(t, html, `class="breadcrumb-current" aria-current="page">design</span>`)
 	assertContains(t, html, `data-view-toggle="list"`)
 	assertContains(t, html, `data-view-toggle="grid"`)
+	assertContains(t, html, `href="/scratch/"`)
+	assertContains(t, html, `临时列表`)
 	assertContains(t, html, `data-open-url="/file/projects/design/screenshots/?action=view"`)
 	assertContains(t, html, `data-open-url="/file/projects/design/release-notes.md?action=view"`)
 	assertContains(t, html, `href="/file/projects/design/screenshots/?action=dl"`)

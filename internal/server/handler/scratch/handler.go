@@ -1,0 +1,181 @@
+package scratchhandler
+
+import (
+	"errors"
+	"io"
+	"mime"
+	"net/http"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/scratch"
+)
+
+const scratchTemplate = "scratch.tpl"
+
+type handler struct {
+	store *scratch.Store
+}
+
+func Register(group *gin.RouterGroup, store *scratch.Store) {
+	h := handler{store: store}
+	group.GET("/", h.index)
+	group.POST("/items", h.create)
+	group.GET("/items/:id", h.get)
+}
+
+func (h handler) index(c *gin.Context) {
+	if h.store == nil {
+		c.String(http.StatusInternalServerError, "临时列表不可用")
+		return
+	}
+	h.renderIndex(c, http.StatusOK, "")
+}
+
+func (h handler) create(c *gin.Context) {
+	if h.store == nil {
+		h.handleCreateError(c, http.StatusInternalServerError, "临时列表不可用")
+		return
+	}
+
+	kind, mimeType, data, status, err := h.readCreatePayload(c)
+	if err != nil {
+		h.handleCreateError(c, status, err.Error())
+		return
+	}
+
+	item, err := h.store.Add(kind, mimeType, data)
+	if err != nil {
+		h.handleCreateError(c, createStatus(err), err.Error())
+		return
+	}
+
+	if wantsJSON(c) {
+		c.JSON(http.StatusOK, gin.H{"id": item.ID})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, "/scratch/")
+}
+
+func (h handler) get(c *gin.Context) {
+	if h.store == nil {
+		c.String(http.StatusInternalServerError, "临时列表不可用")
+		return
+	}
+
+	item, ok := h.store.Get(c.Param("id"))
+	if !ok {
+		c.String(http.StatusNotFound, scratch.ErrItemNotFound.Error())
+		return
+	}
+
+	if c.Query("download") == "1" {
+		c.Header("Content-Disposition", "attachment; filename="+item.ID)
+	}
+	c.Data(http.StatusOK, item.MimeType, item.Data)
+}
+
+func (h handler) readCreatePayload(c *gin.Context) (scratch.Kind, string, []byte, int, error) {
+	switch c.PostForm("kind") {
+	case string(scratch.KindText):
+		return h.readTextPayload(c)
+	case string(scratch.KindImage):
+		return h.readImagePayload(c)
+	default:
+		return "", "", nil, http.StatusBadRequest, scratch.ErrUnsupportedType
+	}
+}
+
+func (h handler) readTextPayload(c *gin.Context) (scratch.Kind, string, []byte, int, error) {
+	text := c.PostForm("text")
+	if text == "" && strings.Contains(c.GetHeader("Content-Type"), "application/json") {
+		var payload struct {
+			Text string `json:"text"`
+		}
+		if err := c.ShouldBindJSON(&payload); err == nil {
+			text = payload.Text
+		}
+	}
+	return scratch.KindText, scratch.TextMIME, []byte(text), http.StatusBadRequest, nil
+}
+
+func (h handler) readImagePayload(c *gin.Context) (scratch.Kind, string, []byte, int, error) {
+	file, err := c.FormFile("image")
+	if err != nil {
+		return "", "", nil, http.StatusBadRequest, scratch.ErrEmptyContent
+	}
+
+	opened, err := file.Open()
+	if err != nil {
+		return "", "", nil, http.StatusInternalServerError, err
+	}
+	defer opened.Close()
+
+	data, err := io.ReadAll(opened)
+	if err != nil {
+		return "", "", nil, http.StatusInternalServerError, err
+	}
+	if len(data) == 0 {
+		return "", "", nil, http.StatusBadRequest, scratch.ErrEmptyContent
+	}
+
+	mimeType := normalizeMIMEType(http.DetectContentType(data))
+	if !strings.HasPrefix(mimeType, "image/") {
+		return "", "", nil, http.StatusBadRequest, scratch.ErrUnsupportedType
+	}
+	return scratch.KindImage, mimeType, data, http.StatusBadRequest, nil
+}
+
+func normalizeMIMEType(value string) string {
+	mediaType, _, err := mime.ParseMediaType(value)
+	if err == nil {
+		value = mediaType
+	}
+	return strings.ToLower(value)
+}
+
+func (h handler) handleCreateError(c *gin.Context, status int, message string) {
+	if wantsJSON(c) {
+		c.JSON(status, gin.H{"error": message})
+		return
+	}
+	if h.store == nil {
+		c.String(status, message)
+		return
+	}
+	h.renderIndex(c, status, message)
+}
+
+func (h handler) renderIndex(c *gin.Context, status int, message string) {
+	data := gin.H{
+		"items":  []scratch.Item{},
+		"limits": scratch.Limits{},
+	}
+	if h.store != nil {
+		data["items"] = h.store.List()
+		data["limits"] = h.store.Limits()
+	} else if message == "" {
+		message = "临时列表不可用"
+		status = http.StatusInternalServerError
+	}
+	if message != "" {
+		data["error"] = message
+	}
+	c.HTML(status, scratchTemplate, data)
+}
+
+func wantsJSON(c *gin.Context) bool {
+	return strings.Contains(c.GetHeader("Accept"), "application/json") ||
+		strings.Contains(c.GetHeader("Content-Type"), "application/json")
+}
+
+func createStatus(err error) int {
+	switch {
+	case errors.Is(err, scratch.ErrItemTooLarge):
+		return http.StatusRequestEntityTooLarge
+	case errors.Is(err, scratch.ErrEmptyContent), errors.Is(err, scratch.ErrUnsupportedType):
+		return http.StatusBadRequest
+	default:
+		return http.StatusBadRequest
+	}
+}

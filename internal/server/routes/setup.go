@@ -8,7 +8,7 @@ import (
 	"github.com/tcp404/OneTiny/resource"
 )
 
-func Setup(r *gin.Engine, _ *scratch.Store) error {
+func Setup(r *gin.Engine, scratchStore *scratch.Store) error {
 
 	t, err := template.ParseFS(resource.FS, "template/*.tpl")
 	if err != nil {
@@ -18,6 +18,7 @@ func Setup(r *gin.Engine, _ *scratch.Store) error {
 
 	loadIndexRoute(r)
 	loadCoreRoute(r)
+	loadScratchRoute(r, scratchStore)
 	loadLoginRoute(r)
 	load404Route(r)
 	loadICORoute(r)
