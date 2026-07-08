@@ -74,3 +74,28 @@ func TestUpdateConfigPersistsAndUpdatesRuntime(t *testing.T) {
 		t.Fatalf("status port = %d, want %d", status.Config.Port, nextPort)
 	}
 }
+
+func TestUpdateConfigPersistsScratchLimitsAndUpdatesRuntime(t *testing.T) {
+	svc, store, rt := newTestService(t)
+	maxItems := 25
+	maxSize := "2MB"
+
+	status, err := svc.UpdateConfig(ConfigPatchDTO{
+		ScratchMaxItems:    &maxItems,
+		ScratchMaxItemSize: &maxSize,
+	})
+	if err != nil {
+		t.Fatalf("UpdateConfig returned error: %v", err)
+	}
+
+	if store.Current().ScratchMaxItems != 25 || store.Current().ScratchMaxItemSize != "2MB" {
+		t.Fatalf("stored scratch config = %d %q", store.Current().ScratchMaxItems, store.Current().ScratchMaxItemSize)
+	}
+	snapshot := rt.Snapshot()
+	if snapshot.ScratchMaxItems != 25 || snapshot.ScratchMaxItemSize != "2MB" || snapshot.ScratchMaxItemBytes != 2*1024*1024 {
+		t.Fatalf("runtime scratch = %+v", snapshot)
+	}
+	if status.Config.ScratchMaxItems != 25 || status.Config.ScratchMaxItemSize != "2MB" {
+		t.Fatalf("status scratch = %+v", status.Config)
+	}
+}
