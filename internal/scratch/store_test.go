@@ -128,26 +128,122 @@ func TestStoreRejectsUnsupportedMime(t *testing.T) {
 	}
 }
 
+func TestStoreListReturnsCopy(t *testing.T) {
+	store, err := NewStore(Limits{MaxItems: 3, MaxItemBytes: 1024})
+	if err != nil {
+		t.Fatalf("NewStore returned error: %v", err)
+	}
+
+	_, err = store.Add(KindText, TextMIME, []byte("hello"))
+	if err != nil {
+		t.Fatalf("Add returned error: %v", err)
+	}
+
+	items := store.List()
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d, want 1", len(items))
+	}
+	items[0].Data[0] = 'H'
+
+	got, ok := store.Get(ContentID(KindText, TextMIME, []byte("hello")))
+	if !ok {
+		t.Fatal("Get returned not found for existing item")
+	}
+	if string(got.Data) != "hello" {
+		t.Fatalf("stored data mutated via List result: %q", string(got.Data))
+	}
+}
+
+func TestStoreGetReturnsCopy(t *testing.T) {
+	store, err := NewStore(Limits{MaxItems: 3, MaxItemBytes: 1024})
+	if err != nil {
+		t.Fatalf("NewStore returned error: %v", err)
+	}
+
+	added, err := store.Add(KindText, TextMIME, []byte("hello"))
+	if err != nil {
+		t.Fatalf("Add returned error: %v", err)
+	}
+
+	got, ok := store.Get(added.ID)
+	if !ok {
+		t.Fatal("Get returned not found for existing item")
+	}
+	got.Data[0] = 'H'
+
+	again, ok := store.Get(added.ID)
+	if !ok {
+		t.Fatal("second Get returned not found for existing item")
+	}
+	if string(again.Data) != "hello" {
+		t.Fatalf("stored data mutated via Get result: %q", string(again.Data))
+	}
+}
+
 func TestStoreConcurrentAddAndList(t *testing.T) {
 	store, err := NewStore(Limits{MaxItems: 200, MaxItemBytes: 1024})
 	if err != nil {
 		t.Fatalf("NewStore returned error: %v", err)
 	}
 
+	expected := make(map[string][]byte, 50)
+	var expectedMu sync.Mutex
 	var wg sync.WaitGroup
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			payload := bytes.Repeat([]byte{byte(i)}, 8)
-			_, _ = store.Add(KindText, TextMIME, payload)
+			added, err := store.Add(KindText, TextMIME, payload)
+			if err != nil {
+				t.Errorf("Add(%d) returned error: %v", i, err)
+				return
+			}
+			expectedMu.Lock()
+			expected[added.ID] = append([]byte(nil), payload...)
+			expectedMu.Unlock()
 			_ = store.List()
 		}(i)
 	}
 	wg.Wait()
 
-	if len(store.List()) == 0 {
-		t.Fatal("concurrent add produced empty list")
+	items := store.List()
+	if len(items) != 50 {
+		t.Fatalf("len(items) = %d, want 50", len(items))
+	}
+	for _, item := range items {
+		expectedMu.Lock()
+		wantData, ok := expected[item.ID]
+		expectedMu.Unlock()
+		if !ok {
+			t.Fatalf("unexpected item ID %q", item.ID)
+		}
+		if _, ok := store.Get(item.ID); !ok {
+			t.Fatalf("Get(%q) reported missing item", item.ID)
+		}
+		got, ok := store.Get(item.ID)
+		if !ok {
+			t.Fatalf("Get(%q) returned missing item on second read", item.ID)
+		}
+		if !bytes.Equal(got.Data, wantData) {
+			t.Fatalf("Get(%q) data = %v, want %v", item.ID, got.Data, wantData)
+		}
+		if item.Kind != KindText || item.MimeType != TextMIME {
+			t.Fatalf("item = %+v, want text/plain", item)
+		}
+	}
+
+	for id := range expected {
+		expectedMu.Lock()
+		wantData := expected[id]
+		expectedMu.Unlock()
+		item, ok := store.Get(id)
+		if !ok {
+			t.Fatalf("expected item %q not found", id)
+		}
+		if !bytes.Equal(item.Data, wantData) {
+			t.Fatalf("item %q data corrupted: %v", id, item.Data)
+		}
 	}
 }
 

@@ -79,10 +79,13 @@ func (s *Store) Limits() Limits {
 }
 
 func (s *Store) Add(kind Kind, mimeType string, data []byte) (Item, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if len(data) == 0 {
 		return Item{}, ErrEmptyContent
 	}
-	if len(data) > s.currentMaxItemBytes() {
+	if len(data) > s.limits.MaxItemBytes {
 		return Item{}, ErrItemTooLarge
 	}
 	if !isSupportedType(kind, mimeType) {
@@ -90,11 +93,8 @@ func (s *Store) Add(kind Kind, mimeType string, data []byte) (Item, error) {
 	}
 
 	id := ContentID(kind, mimeType, data)
-	now := s.currentTime()
+	now := s.currentTimeLocked()
 	copyData := append([]byte(nil), data...)
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	if existingIdx, ok := s.index[id]; ok {
 		existing := s.items[existingIdx]
@@ -171,21 +171,12 @@ func isSupportedType(kind Kind, mimeType string) bool {
 	}
 }
 
-func (s *Store) currentTime() time.Time {
-	s.mu.RLock()
+func (s *Store) currentTimeLocked() time.Time {
 	now := s.now
-	s.mu.RUnlock()
 	if now == nil {
 		return time.Now()
 	}
 	return now()
-}
-
-func (s *Store) currentMaxItemBytes() int {
-	s.mu.RLock()
-	max := s.limits.MaxItemBytes
-	s.mu.RUnlock()
-	return max
 }
 
 func (s *Store) moveToTopLocked(idx int) {
