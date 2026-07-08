@@ -39,6 +39,32 @@ func TestRootActionAppliesScratchFlagsToRuntimeOnly(t *testing.T) {
 	}
 }
 
+func TestRootActionPreservesConfiguredScratchDefaultsWhenFlagsUnset(t *testing.T) {
+	defaults := runtime.Snapshot{
+		RootPath:            "/tmp/root",
+		Port:                8192,
+		ScratchMaxItems:     33,
+		ScratchMaxItemSize:  "3MB",
+		ScratchMaxItemBytes: 3 * 1024 * 1024,
+	}
+	set := flag.NewFlagSet("root", flag.ContinueOnError)
+	for _, cliFlag := range newGlobalFlag(defaults) {
+		if err := cliFlag.Apply(set); err != nil {
+			t.Fatalf("apply flag: %v", err)
+		}
+	}
+	ctx := cli.NewContext(cli.NewApp(), set, nil)
+	rt := runtime.New(defaults)
+
+	if err := rootAction(ctx, rt); err != nil {
+		t.Fatalf("rootAction returned error: %v", err)
+	}
+	snapshot := rt.Snapshot()
+	if snapshot.ScratchMaxItems != 33 || snapshot.ScratchMaxItemSize != "3MB" || snapshot.ScratchMaxItemBytes != 3*1024*1024 {
+		t.Fatalf("scratch runtime = %+v", snapshot)
+	}
+}
+
 func TestPrintInfoAlwaysShowsScratchURLWithFallbackHost(t *testing.T) {
 	var buf bytes.Buffer
 	oldLogWriter := log.Writer()
