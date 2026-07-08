@@ -29,15 +29,14 @@ type Dependencies struct {
 }
 
 type Manager struct {
-	mu         sync.Mutex
-	cfg        *runtime.Runtime
-	logger     *accesslog.Logger
-	scratch    *scratch.Store
-	scratchErr error
-	srv        *http.Server
-	listener   net.Listener
-	done       chan error
-	stopping   bool
+	mu       sync.Mutex
+	cfg      *runtime.Runtime
+	logger   *accesslog.Logger
+	scratch  *scratch.Store
+	srv      *http.Server
+	listener net.Listener
+	done     chan error
+	stopping bool
 }
 
 func NewManager(cfg *runtime.Runtime) *Manager {
@@ -46,11 +45,12 @@ func NewManager(cfg *runtime.Runtime) *Manager {
 
 func NewManagerWithDependencies(deps Dependencies) *Manager {
 	scratchStore := deps.Scratch
-	var scratchErr error
 	if scratchStore == nil && deps.Runtime != nil {
-		scratchStore, scratchErr = newScratchStore(deps.Runtime.Snapshot())
+		if store, err := newScratchStore(deps.Runtime.Snapshot()); err == nil {
+			scratchStore = store
+		}
 	}
-	return &Manager{cfg: deps.Runtime, logger: deps.AccessLog, scratch: scratchStore, scratchErr: scratchErr}
+	return &Manager{cfg: deps.Runtime, logger: deps.AccessLog, scratch: scratchStore}
 }
 
 func (m *Manager) Start() error {
@@ -158,7 +158,6 @@ func (m *Manager) RestartWithSnapshot(snapshot runtime.Snapshot, commit func() e
 		var err error
 		nextScratch, err = scratch.NewStore(limits)
 		if err != nil {
-			m.scratchErr = err
 			m.mu.Unlock()
 			return err
 		}
@@ -372,23 +371,18 @@ func (m *Manager) setScratchLimits(limits scratch.Limits, prepared *scratch.Stor
 			var err error
 			prepared, err = scratch.NewStore(limits)
 			if err != nil {
-				m.scratchErr = err
 				return err
 			}
 		}
 		if err := prepared.UpdateLimits(limits); err != nil {
-			m.scratchErr = err
 			return err
 		}
 		m.scratch = prepared
-		m.scratchErr = nil
 		return nil
 	}
 	if err := m.scratch.UpdateLimits(limits); err != nil {
-		m.scratchErr = err
 		return err
 	}
-	m.scratchErr = nil
 	return nil
 }
 
