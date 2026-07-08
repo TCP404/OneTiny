@@ -29,8 +29,8 @@
 - `internal/gui/service.go`: Wails-facing service methods that wrap `internal/control.Controller`.
 - `internal/gui/dialogs.go`: Wails dialog adapter for choose directory, export target, confirmation, and opening config dir.
 - `internal/gui/app.go`: Wails app/window/tray construction.
-- `cmd/onetiny-gui/main.go`: desktop app entrypoint.
-- `frontend/assets.go`: Go embed package for `frontend/dist` so the GUI entrypoint can import assets without illegal `..` embed paths.
+- `cmd/gui/main.go`: desktop app entrypoint.
+- `internal/gui/webassets/assets.go`: Go embed package for `internal/gui/webassets/dist` so the GUI entrypoint can import assets without illegal `..` embed paths.
 - `frontend/index.html`: desktop app shell.
 - `frontend/package.json`: Vite/TypeScript scripts.
 - `frontend/tsconfig.json`: TypeScript config.
@@ -258,7 +258,7 @@ func loginSnapshot() loginCredentialSnapshot {
 Add the missing import:
 
 ```go
-"github.com/tcp404/OneTiny-cli/internal/runtimeconf"
+"github.com/tcp404/OneTiny/internal/runtimeconf"
 ```
 
 - [ ] **Step 6: Add manager lifecycle helper tests**
@@ -407,8 +407,8 @@ package control
 import (
 	"testing"
 
-	"github.com/tcp404/OneTiny-cli/internal/conf"
-	"github.com/tcp404/OneTiny-cli/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 )
 
 func TestControllerStartStopAndStatus(t *testing.T) {
@@ -539,11 +539,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tcp404/OneTiny-cli/internal/accesslog"
-	"github.com/tcp404/OneTiny-cli/internal/conf"
-	"github.com/tcp404/OneTiny-cli/internal/runtimeconf"
-	"github.com/tcp404/OneTiny-cli/internal/security"
-	"github.com/tcp404/OneTiny-cli/internal/server"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/security"
+	"github.com/tcp404/OneTiny/internal/server"
 	"github.com/spf13/viper"
 )
 
@@ -889,12 +889,12 @@ git commit -m "feat: add GUI control controller"
 ## Task 3: Wails Shell And Service Binding
 
 **Files:**
-- Create: `cmd/onetiny-gui/main.go`
+- Create: `cmd/gui/main.go`
 - Create: `internal/gui/app.go`
 - Create: `internal/gui/service.go`
 - Create: `internal/gui/dialogs.go`
 - Create: `frontend/index.html`
-- Create: `frontend/assets.go`
+- Create: `internal/gui/webassets/assets.go`
 - Create: `frontend/src/main.ts`
 - Create: `frontend/src/types.ts`
 - Create: `frontend/src/styles.css`
@@ -982,7 +982,7 @@ Create `internal/gui/service.go`:
 ```go
 package gui
 
-import "github.com/tcp404/OneTiny-cli/internal/control"
+import "github.com/tcp404/OneTiny/internal/control"
 
 type Service struct {
 	controller *control.Controller
@@ -1052,7 +1052,7 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/tcp404/OneTiny-cli/internal/conf"
+	"github.com/tcp404/OneTiny/internal/conf"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -1113,7 +1113,7 @@ package gui
 import (
 	"embed"
 
-	"github.com/tcp404/OneTiny-cli/internal/control"
+	"github.com/tcp404/OneTiny/internal/control"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/icons"
@@ -1176,7 +1176,7 @@ The behavior must be: clicking the window close button cancels close and hides t
 
 - [ ] **Step 6: Add GUI entrypoint**
 
-Create `cmd/onetiny-gui/main.go`:
+Create `cmd/gui/main.go`:
 
 ```go
 package main
@@ -1184,9 +1184,9 @@ package main
 import (
 	"log"
 
-	"github.com/tcp404/OneTiny-cli/frontend"
-	"github.com/tcp404/OneTiny-cli/internal/conf"
-	"github.com/tcp404/OneTiny-cli/internal/gui"
+	"github.com/tcp404/OneTiny/internal/gui/webassets"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/gui"
 )
 
 func main() {
@@ -1199,10 +1199,10 @@ func main() {
 }
 ```
 
-Create `frontend/assets.go`:
+Create `internal/gui/webassets/assets.go`:
 
 ```go
-package frontend
+package webassets
 
 import "embed"
 
@@ -1210,7 +1210,7 @@ import "embed"
 var Assets embed.FS
 ```
 
-Build `frontend/dist` before running `go build ./cmd/onetiny-gui`.
+Build `internal/gui/webassets/dist` before running `go build ./cmd/gui`.
 
 - [ ] **Step 7: Add minimal frontend TypeScript**
 
@@ -1632,7 +1632,7 @@ npm run build
 cd ..
 wails3 generate bindings
 go test -count=1 ./internal/gui ./internal/control
-go build ./cmd/onetiny-gui
+go build ./cmd/gui
 git diff --check
 ```
 
@@ -1641,7 +1641,7 @@ Expected: frontend builds, bindings generated, GUI command builds. Commit genera
 - [ ] **Step 10: Commit task 3**
 
 ```bash
-git add go.mod go.sum cmd/onetiny-gui internal/gui frontend
+git add go.mod go.sum cmd/gui internal/gui frontend
 git commit -m "feat: scaffold Wails control panel"
 ```
 
@@ -1977,7 +1977,7 @@ bin/
 build/bin/
 ```
 
-Keep `frontend/dist` out of `.gitignore` because `frontend/assets.go` embeds it for desktop builds. Commit `frontend/dist` only after `npm run build` produces deterministic output.
+Keep `internal/gui/webassets/dist` out of `.gitignore` because `internal/gui/webassets/assets.go` embeds it for desktop builds. Commit `internal/gui/webassets/dist` only after `npm run build` produces deterministic output.
 
 - [ ] **Step 2: Add Wails project config**
 
@@ -2057,7 +2057,7 @@ Run the built app on the current OS and verify:
 - [ ] **Step 6: Commit task 6**
 
 ```bash
-git add README.md .gitignore wails.json frontend cmd/onetiny-gui internal/gui go.mod go.sum
+git add README.md .gitignore wails.json frontend cmd/gui internal/gui go.mod go.sum
 git commit -m "docs: add GUI usage and desktop build config"
 ```
 
