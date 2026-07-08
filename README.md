@@ -1,4 +1,4 @@
-> The documentation was written on 06 June 2021.
+> 用户说明最初写于 2021 年；维护者文档见 [开发文档](#开发文档)。
 
 <p align="center">
     <img src="README/logo.svg" alt="logo">
@@ -53,6 +53,13 @@ OneTiny 是一个用于局域网内共享文件的微型程序，它能将当前
 - 核心功能：[gin](https://gin-gonic.com/zh-cn/)
 - 配置管理：[viper](https://github.com/spf13/viper)
 - CLI管理：[urfave/cli](https://github.com/urfave/cli/v2)
+
+## [开发文档]
+
+维护代码前请先阅读：
+
+- [架构规范](docs/architecture.md)：目录职责、依赖方向、配置可信源和运行态边界。
+- [开发规范](docs/development.md)：代码组织、测试、生成物、PR 和发版规则。
 
 ## [使用说明]
 可从本仓库的 [Release](https://github.com/tcp404/OneTiny/releases/) 中下载对应版本。已提供 [Linux 版](https://github.com/tcp404/OneTiny/releases/download/v0.5.0/OneTiny)、[Windows 版](https://github.com/tcp404/OneTiny/releases/download/v0.5.0/OneTiny.exe)，[Mac 版](https://github.com/tcp404/OneTiny/releases/download/v0.5.0/OneTiny_mac)，其他系统的同学请下载后自行编译。
