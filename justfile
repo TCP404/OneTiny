@@ -24,7 +24,7 @@ goarch := env("GOARCH", `go env GOARCH`)
 exe_suffix := if target_goos == "windows" { ".exe" } else { "" }
 windows_gui_ldflags := if target_goos == "windows" { " -H windowsgui" } else { "" }
 default_build_recipe := if host_goos == "darwin" { if target_goos == "darwin" { "package-mac" } else { "build-gui" } } else { "build-gui" }
-go_ldflags := f'-s -w -X github.com/tcp404/OneTiny/internal/constant.VERSION={{version}}{{windows_gui_ldflags}}'
+go_ldflags := f'-s -w -X github.com/tcp404/OneTiny/internal/version.Version={{version}}{{windows_gui_ldflags}}'
 gui_binary := f'{{bin_dir}}/{{app_name}}{{exe_suffix}}'
 cli_binary := f'{{bin_dir}}/{{cli_name}}{{exe_suffix}}'
 mac_app := f'{{bin_dir}}/{{app_name}}.app'

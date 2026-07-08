@@ -4,12 +4,16 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/runtime"
 )
 
-func Setup(r *gin.Engine) *gin.Engine {
-	r.Use(Logger(), gin.Recovery())
+func Setup(r *gin.Engine, rt *runtime.Runtime, logger *accesslog.Logger) *gin.Engine {
+	r.Use(Logger(rt), gin.Recovery())
+	r.Use(RuntimeSnapshot(rt))
+	r.Use(AccessLogger(logger))
 	r.Use(enableCookieSession())
-	r.Use(AccessLog())
+	r.Use(AccessLog(logger))
 	return r
 }
 

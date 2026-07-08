@@ -6,12 +6,13 @@ import (
 	"errors"
 
 	"github.com/fatih/color"
-	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/app/validation"
+	"github.com/tcp404/OneTiny/internal/config"
 	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/urfave/cli/v2"
 )
 
-func secureCmd() *cli.Command {
+func secureCmd(store *config.Store) *cli.Command {
 	return &cli.Command{
 		Name:        "sec",
 		Aliases:     []string{"s"},
@@ -39,12 +40,12 @@ func secureCmd() *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			_, err := secureAction(c)
+			_, err := secureAction(store, c)
 			if err != nil {
 				return cli.Exit(color.RedString(err.Error()), 21)
 			}
 			if !hasSecureFlag(c) {
-				return cli.Exit(color.GreenString("当前访问登录是否已开启: %t", conf.Current().IsSecure), 0)
+				return cli.Exit(color.GreenString("当前访问登录是否已开启: %t", store.Current().IsSecure), 0)
 			}
 			return cli.Exit(color.GreenString("设置成功~"), 0)
 		},
@@ -69,14 +70,11 @@ const (
 	SECU ups = 1 << 2 // The weight of SECU is 4
 )
 
-func secureAction(c *cli.Context) (ups, error) {
+func secureAction(store *config.Store, c *cli.Context) (ups, error) {
 	var weight ups
-	if _, err := conf.RefreshCurrent(); err != nil {
-		return weight, err
-	}
-	current := conf.Current()
-	credentials := conf.CredentialConfigFromConfig(current)
-	var patch conf.SecurityPatch
+	current := store.Current()
+	credentials := config.CredentialConfigFromConfig(current)
+	var patch config.SecurityPatch
 
 	// 当填写了 -s 选项并且 -s 的值为 true 时才设置
 	secureIsSet, secureValue := c.IsSet("secure"), c.Bool("secure")
@@ -100,7 +98,6 @@ func secureAction(c *cli.Context) (ups, error) {
 		weight |= PASS
 		hash, err := security.HashPassword(p)
 		if err != nil {
-			conf.RestoreInMemory(current)
 			return weight, err
 		}
 		credentials.PasswordHash = hash
@@ -120,7 +117,7 @@ func secureAction(c *cli.Context) (ups, error) {
 	}
 
 	if hasSecureFlag(c) {
-		if _, err := conf.SaveSecurityPatch(patch); err != nil {
+		if _, err := store.PatchSecurity(patch); err != nil {
 			return weight, err
 		}
 	}
@@ -141,45 +138,12 @@ func secureAction(c *cli.Context) (ups, error) {
 // 开启访问登录时，需配置文件中已设置帐号密码
 // 设置密码时，需配置文件中已设置账户
 // 设置账户时，需配置文件中已设置密码
-func Handle(weight ups) error {
-	return handleCredentialConfig(weight, conf.CredentialConfigFromConfig(conf.Current()))
+func Handle(weight ups, credentials security.CredentialConfig) error {
+	return handleCredentialConfig(weight, credentials)
 }
 
 func handleCredentialConfig(weight ups, credentials security.CredentialConfig) error {
-	switch weight {
-	case USER | PASS | SECU:
-		// 111 开启访问登录，并设置账户和密码
-		return validateCredentialsForSecureMode(credentials)
-	case USER | PASS:
-		// 110 设置账户和密码
-		return nil
-	case USER | SECU:
-		// 101 开启访问登录，并设置用户名
-		return validateCredentialsForSecureMode(credentials)
-	case USER:
-		// 100 设置用户名，需配置文件中有密码
-		if credentials.IsConfigured() {
-			return nil
-		}
-		return errors.New("未找到您的帐号，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。")
-	case PASS | SECU:
-		// 011 开启访问登录，并设置密码
-		return validateCredentialsForSecureMode(credentials)
-	case PASS:
-		// 010 设置密码，需配置文件中有账户名
-		if credentials.Username != "" {
-			return nil
-		}
-		return errors.New("未找到您的帐号，请使用 `onetiny sec -u=帐号 -p=密码` 进行设置。")
-	case SECU:
-		// 001 开启访问登录
-		return validateCredentialsForSecureMode(credentials)
-	case 0:
-		// 000 打印当前是否开启访问登录
-		return nil
-	default:
-		return errors.New("设置失败～")
-	}
+	return validation.ValidateSecureTransition(uint8(weight), credentials)
 }
 
 func validateCredentialsForSecureMode(credentials security.CredentialConfig) error {

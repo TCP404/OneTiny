@@ -3,11 +3,11 @@ package main
 import (
 	"strconv"
 
-	"github.com/tcp404/OneTiny/internal/state"
+	"github.com/tcp404/OneTiny/internal/runtime"
 	"github.com/urfave/cli/v2"
 )
 
-func newGlobalFlag(defaults state.ConfigSnapshot) []cli.Flag {
+func newGlobalFlag(defaults runtime.Snapshot) []cli.Flag {
 	return []cli.Flag{
 		&cli.PathFlag{
 			Name:        "road",

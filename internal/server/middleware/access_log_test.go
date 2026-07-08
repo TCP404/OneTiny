@@ -18,11 +18,9 @@ func TestAccessLogClassifiesSuccessRejectAndErrorEvents(t *testing.T) {
 	})
 
 	logger := accesslog.New(filepath.Join(t.TempDir(), "access.log"))
-	restore := accesslog.SetLoggerForTest(logger)
-	t.Cleanup(restore)
 
 	r := gin.New()
-	r.Use(AccessLog())
+	r.Use(AccessLog(logger))
 	r.GET("/ok", func(c *gin.Context) {
 		c.String(http.StatusOK, "ok")
 	})
@@ -76,11 +74,9 @@ func TestAccessLogWritesFailureEventWhenRecoveryHandlesPanic(t *testing.T) {
 	})
 
 	logger := accesslog.New(filepath.Join(t.TempDir(), "access.log"))
-	restore := accesslog.SetLoggerForTest(logger)
-	t.Cleanup(restore)
 
 	r := gin.New()
-	r.Use(gin.Recovery(), AccessLog())
+	r.Use(gin.Recovery(), AccessLog(logger))
 	r.GET("/panic", func(c *gin.Context) {
 		panic("boom")
 	})
@@ -111,11 +107,9 @@ func TestSetupPanicRecordsSingleAccessFailure(t *testing.T) {
 	})
 
 	logger := accesslog.New(filepath.Join(t.TempDir(), "access.log"))
-	restore := accesslog.SetLoggerForTest(logger)
-	t.Cleanup(restore)
 
 	r := gin.New()
-	Setup(r)
+	Setup(r, nil, logger)
 	r.GET("/panic", func(c *gin.Context) {
 		panic("boom")
 	})

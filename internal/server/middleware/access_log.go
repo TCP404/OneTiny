@@ -7,12 +7,21 @@ import (
 	"github.com/tcp404/OneTiny/internal/accesslog"
 )
 
-func AccessLog() gin.HandlerFunc {
+func AccessLogger(logger *accesslog.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if logger != nil {
+			c.Set(accesslog.ContextKey, logger)
+		}
+		c.Next()
+	}
+}
+
+func AccessLog(logger *accesslog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if recovered := recover(); recovered != nil {
 				c.Status(http.StatusInternalServerError)
-				logRequestEvent(c, accesslog.EventError, accesslog.ResultFailure, http.StatusInternalServerError)
+				logRequestEvent(logger, c, accesslog.EventError, accesslog.ResultFailure, http.StatusInternalServerError)
 				panic(recovered)
 			}
 		}()
@@ -21,7 +30,7 @@ func AccessLog() gin.HandlerFunc {
 
 		status := c.Writer.Status()
 		event, result := classifyRequestStatus(status)
-		logRequestEvent(c, event, result, status)
+		logRequestEvent(logger, c, event, result, status)
 	}
 }
 
@@ -36,8 +45,11 @@ func classifyRequestStatus(status int) (string, string) {
 	}
 }
 
-func logRequestEvent(c *gin.Context, event, result string, status int) {
-	accesslog.Log(accesslog.Event{
+func logRequestEvent(logger *accesslog.Logger, c *gin.Context, event, result string, status int) {
+	if logger == nil {
+		return
+	}
+	_ = logger.Write(accesslog.Event{
 		ClientIP: clientIP(c),
 		Method:   method(c),
 		Event:    event,

@@ -6,10 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/tcp404/OneTiny/internal/constant"
-	"github.com/tcp404/OneTiny/internal/kit/chain"
-	"github.com/tcp404/OneTiny/internal/kit/verify"
-	"github.com/tcp404/OneTiny/internal/state"
+	"github.com/tcp404/OneTiny/internal/app/validation"
+	"github.com/tcp404/OneTiny/internal/config"
+	"github.com/tcp404/OneTiny/internal/runtime"
+	"github.com/tcp404/OneTiny/internal/version"
 
 	"github.com/urfave/cli/v2"
 )
@@ -37,7 +37,7 @@ func initCLI(output io.Writer) {
 }
 
 // CLI 函数作为程序入口，主要负责处理命令和 flag
-func CLI(runtimeState *state.RuntimeConfig) *cli.App {
+func CLI(store *config.Store, runtimeState *runtime.Runtime) *cli.App {
 	defaults := runtimeState.Snapshot()
 	initCLI(defaults.Output)
 
@@ -45,10 +45,10 @@ func CLI(runtimeState *state.RuntimeConfig) *cli.App {
 		Name:            "OneTiny",
 		Usage:           "一个用于局域网内共享文件的FTP程序",
 		UsageText:       "onetiny [GLOBAL OPTIONS] COMMAND [COMMAND OPTIONS] [参数...]",
-		Version:         constant.VERSION,
+		Version:         version.Version,
 		Flags:           newGlobalFlag(defaults),
 		Authors:         []*cli.Author{{Name: "Boii", Email: "i@tcp404.com"}},
-		Commands:        []*cli.Command{updateCmd(), configCmd(defaults), secureCmd()},
+		Commands:        []*cli.Command{updateCmd(), configCmd(store, defaults), secureCmd(store)},
 		CommandNotFound: func(c *cli.Context, s string) { cli.ShowAppHelpAndExit(c, 10) },
 		Writer:          defaults.Output,
 		ErrWriter:       defaults.Output,
@@ -61,20 +61,20 @@ func CLI(runtimeState *state.RuntimeConfig) *cli.App {
 	}
 }
 
-func afterRootAction(runtimeState *state.RuntimeConfig) error {
+func afterRootAction(runtimeState *runtime.Runtime) error {
 	snapshot := runtimeState.Snapshot()
-	return chain.NewHandleChain().
-		AddToHead(verify.NewPortVerifier(snapshot.Port)).
-		AddToHead(verify.NewPathVerifier(snapshot.RootPath)).
-		Iterator()
+	if err := validation.ValidatePort(snapshot.Port); err != nil {
+		return err
+	}
+	return validation.ValidatePath(snapshot.RootPath)
 }
 
-func rootAction(c *cli.Context, runtimeState *state.RuntimeConfig) error {
+func rootAction(c *cli.Context, runtimeState *runtime.Runtime) error {
 	port := c.Int("port")
 	maxLevel := uint8(c.Int("max"))
 	allowUpload := c.Bool("allow")
 	secure := c.Bool("secure")
-	patch := state.ConfigPatch{
+	patch := runtime.Patch{
 		Port:          &port,
 		MaxLevel:      &maxLevel,
 		IsAllowUpload: &allowUpload,
