@@ -258,3 +258,4 @@ exe/
 .playwright-mcp/
 build/
 docs/superpowers/
+.worktrees/
