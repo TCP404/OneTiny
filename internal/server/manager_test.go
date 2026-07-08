@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 func TestServiceManagerStartStopRunningStatus(t *testing.T) {
-	cfg := runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	cfg := state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath:      t.TempDir(),
 		Port:          0,
 		MaxLevel:      3,
@@ -66,7 +66,7 @@ func TestServiceManagerStartStopRunningStatus(t *testing.T) {
 }
 
 func TestServiceManagerRestartStartsWhenStopped(t *testing.T) {
-	cfg := runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	cfg := state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: t.TempDir(),
 		Port:     0,
 	})
@@ -88,11 +88,11 @@ func TestServiceManagerRestartStartsWhenStopped(t *testing.T) {
 
 func TestServiceManagerStartInstallsRuntimeConfig(t *testing.T) {
 	t.Cleanup(func() {
-		runtimeconf.SetCurrent(nil)
+		state.SetCurrent(nil)
 	})
-	runtimeconf.SetCurrent(nil)
+	state.SetCurrent(nil)
 
-	cfg := runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	cfg := state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: t.TempDir(),
 		Port:     0,
 	})
@@ -106,13 +106,13 @@ func TestServiceManagerStartInstallsRuntimeConfig(t *testing.T) {
 		}
 	})
 
-	if got := runtimeconf.Current(); got != cfg {
-		t.Fatalf("runtimeconf.Current() = %p, want %p", got, cfg)
+	if got := state.Current(); got != cfg {
+		t.Fatalf("state.Current() = %p, want %p", got, cfg)
 	}
 }
 
 func TestServiceManagerApplyRuntimeConfig(t *testing.T) {
-	cfg := runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	cfg := state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: t.TempDir(),
 		Port:     0,
 		MaxLevel: 0,
@@ -122,7 +122,7 @@ func TestServiceManagerApplyRuntimeConfig(t *testing.T) {
 	nextRoot := t.TempDir()
 	upload := true
 	level := uint8(2)
-	if err := manager.ApplyRuntimeConfig(runtimeconf.ConfigPatch{
+	if err := manager.ApplyRuntimeConfig(state.ConfigPatch{
 		RootPath:      &nextRoot,
 		IsAllowUpload: &upload,
 		MaxLevel:      &level,
@@ -140,7 +140,7 @@ func TestServiceManagerApplyRuntimeConfig(t *testing.T) {
 }
 
 func TestServiceManagerRestartWithSnapshotPrepareFailureKeepsOldServer(t *testing.T) {
-	cfg := runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	cfg := state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: t.TempDir(),
 		Port:     freeServerTestPort(t),
 		IP:       "127.0.0.1",

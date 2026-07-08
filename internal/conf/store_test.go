@@ -20,9 +20,9 @@ func resetViper(t *testing.T) {
 
 func resetConfig(t *testing.T) {
 	t.Helper()
-	original := *Config
+	original := currentConfig
 	t.Cleanup(func() {
-		*Config = original
+		currentConfig = original
 	})
 }
 
@@ -175,14 +175,15 @@ account:
 			resetConfig(t)
 			writeUserConfig(t, tt.config)
 
-			if err := LoadConfig(); err != nil {
+			cfg, err := LoadConfig()
+			if err != nil {
 				t.Fatalf("LoadConfig returned error: %v", err)
 			}
-			if Config.Username != tt.wantUsername {
-				t.Fatalf("Config.Username = %q, want %q", Config.Username, tt.wantUsername)
+			if cfg.Username != tt.wantUsername {
+				t.Fatalf("Config.Username = %q, want %q", cfg.Username, tt.wantUsername)
 			}
-			if Config.Password != tt.wantPassword {
-				t.Fatalf("Config.Password = %q, want %q", Config.Password, tt.wantPassword)
+			if cfg.PasswordHash != tt.wantPassword {
+				t.Fatalf("Config.PasswordHash = %q, want %q", cfg.PasswordHash, tt.wantPassword)
 			}
 		})
 	}

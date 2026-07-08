@@ -10,7 +10,7 @@ import (
 	"github.com/tcp404/OneTiny/internal/accesslog"
 	"github.com/tcp404/OneTiny/internal/constant"
 	"github.com/tcp404/OneTiny/internal/handle"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/kit/safepath"
 )
 
 func Uploader(c *gin.Context) {
@@ -35,7 +35,7 @@ func Uploader(c *gin.Context) {
 		handle.ErrorHandle(c, "文件保存失败！")
 		return
 	}
-	target, ok := runtimeconf.ResolveCreateWithinRoot(cfg.RootPath, currPath, filename)
+	target, ok := safepath.ResolveCreateWithinRoot(cfg.RootPath, currPath, filename)
 	if !ok {
 		logRequestEvent(c, accesslog.EventUpload, accesslog.ResultFailure, http.StatusInternalServerError)
 		handle.ErrorHandle(c, "文件保存失败！")

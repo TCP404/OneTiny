@@ -23,7 +23,7 @@ The approved GUI spec covers several subsystems: backend service control, creden
 - Modify `internal/conf/conf.go`: load new bcrypt fields and reject invalid protected legacy credentials.
 - Modify `cmd/secure.go`: CLI `sec` writes bcrypt credentials through `internal/security`.
 - Modify `internal/handle/secure/login.go`: Web login verifies bcrypt credentials.
-- Create `internal/runtimeconf/config.go`: thread-safe runtime config snapshot for hot updates.
+- Create `internal/state/config.go`: thread-safe runtime config snapshot for hot updates.
 - Create `internal/server/manager.go`: start, stop, restart, status, and hot-update Gin server manager.
 - Modify `internal/server/server.go`: keep current `RunCore()` behavior by delegating to `ServiceManager`.
 - Modify `internal/server/middleware/check-login.go`: read login switch from runtime config.
@@ -389,8 +389,8 @@ func TestSecureActionWritesBcryptCredentials(t *testing.T) {
 		t.Fatalf("stored hash does not verify: %v", err)
 	}
 
-	conf.Config.Username = viper.GetString("account.custom.user")
-	conf.Config.Password = viper.GetString("account.custom.pass_hash")
+	conf.UnsafeCurrentForTest().Username = viper.GetString("account.custom.user")
+	conf.UnsafeCurrentForTest().PasswordHash = viper.GetString("account.custom.pass_hash")
 }
 ```
 
@@ -487,10 +487,10 @@ import (
 Replace MD5 comparison with:
 
 ```go
-	if c.PostForm("username") == conf.Config.Username &&
-		security.VerifyPassword(conf.Config.Password, c.PostForm("password")) == nil {
+	if c.PostForm("username") == conf.Current().Username &&
+		security.VerifyPassword(conf.Current().PasswordHash, c.PostForm("password")) == nil {
 		session := sessions.Default(c)
-		session.Set("login", conf.Config.SessionVal)
+		session.Set("login", conf.Current().SessionVal)
 		session.Save()
 		c.JSON(http.StatusOK, gin.H{"code": 1, "message": "登录成功"})
 		return
@@ -518,17 +518,17 @@ git commit -m "feat: use bcrypt for login credentials"
 ## Task 4: Runtime Config And ServiceManager
 
 **Files:**
-- Create: `internal/runtimeconf/config.go`
-- Create: `internal/runtimeconf/config_test.go`
+- Create: `internal/state/config.go`
+- Create: `internal/state/config_test.go`
 - Create: `internal/server/manager.go`
 - Modify: `internal/server/server.go`
 
 - [ ] **Step 1: Write failing runtime config test**
 
-Create `internal/runtimeconf/config_test.go`:
+Create `internal/state/config_test.go`:
 
 ```go
-package runtimeconf
+package state
 
 import "testing"
 
@@ -563,17 +563,17 @@ func ptrBool(v bool) *bool { return &v }
 Run:
 
 ```bash
-go test ./internal/runtimeconf -run TestRuntimeConfigUpdate
+go test ./internal/state -run TestRuntimeConfigUpdate
 ```
 
-Expected: FAIL because package `internal/runtimeconf` does not exist.
+Expected: FAIL because package `internal/state` does not exist.
 
 - [ ] **Step 3: Implement runtime config in an independent package**
 
-Create `internal/runtimeconf/config.go`:
+Create `internal/state/config.go`:
 
 ```go
-package runtimeconf
+package state
 
 import "sync"
 
@@ -651,7 +651,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/state"
 	"github.com/gin-gonic/gin"
 )
 
@@ -660,11 +660,11 @@ var ErrServerNotRunning = errors.New("服务未运行")
 
 type ServiceManager struct {
 	mu      sync.Mutex
-	runtime *runtimeconf.RuntimeConfig
+	runtime *state.RuntimeConfig
 	server  *http.Server
 }
 
-func NewServiceManager(runtime *runtimeconf.RuntimeConfig) *ServiceManager {
+func NewServiceManager(runtime *state.RuntimeConfig) *ServiceManager {
 	return &ServiceManager{runtime: runtime}
 }
 
@@ -722,7 +722,7 @@ func (m *ServiceManager) Running() bool {
 	return m.server != nil
 }
 
-func (m *ServiceManager) Status() runtimeconf.ConfigSnapshot {
+func (m *ServiceManager) Status() state.ConfigSnapshot {
 	return m.runtime.Snapshot()
 }
 ```
@@ -732,14 +732,14 @@ func (m *ServiceManager) Status() runtimeconf.ConfigSnapshot {
 Modify `internal/server/server.go`:
 
 ```go
-func snapshotFromGlobalConfig() runtimeconf.ConfigSnapshot {
-	return runtimeconf.ConfigSnapshot{
-		RootPath:      conf.Config.RootPath,
-		Port:          conf.Config.Port,
-		MaxLevel:      conf.Config.MaxLevel,
-		IsAllowUpload: conf.Config.IsAllowUpload,
-		IsSecure:      conf.Config.IsSecure,
-		IP:            conf.Config.IP,
+func snapshotFromGlobalConfig() state.ConfigSnapshot {
+	return state.ConfigSnapshot{
+		RootPath:      conf.Current().RootPath,
+		Port:          conf.Current().Port,
+		MaxLevel:      conf.Current().MaxLevel,
+		IsAllowUpload: conf.Current().IsAllowUpload,
+		IsSecure:      conf.Current().IsSecure,
+		IP:            conf.Current().IP,
 	}
 }
 
@@ -750,25 +750,25 @@ func setupEngine(r *gin.Engine) {
 
 func initServer() *http.Server {
 	gin.SetMode(gin.ReleaseMode)
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(snapshotFromGlobalConfig()))
+	state.SetCurrent(state.NewRuntimeConfig(snapshotFromGlobalConfig()))
 	r := gin.New()
 	setupEngine(r)
 	s := &http.Server{
-		Addr:    ":" + strconv.Itoa(conf.Config.Port),
+		Addr:    ":" + strconv.Itoa(conf.Current().Port),
 		Handler: r,
 	}
 	return s
 }
 ```
 
-Add `github.com/tcp404/OneTiny/internal/runtimeconf` to the imports.
+Add `github.com/tcp404/OneTiny/internal/state` to the imports.
 
 - [ ] **Step 6: Verify runtime and server tests pass**
 
 Run:
 
 ```bash
-go test ./internal/runtimeconf ./internal/server
+go test ./internal/state ./internal/server
 ```
 
 Expected: PASS.
@@ -776,7 +776,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit service manager**
 
 ```bash
-git add internal/runtimeconf internal/server/manager.go internal/server/server.go
+git add internal/state internal/server/manager.go internal/server/server.go
 git commit -m "feat: add service manager"
 ```
 
@@ -797,7 +797,7 @@ import (
 	"net/http"
 
 	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/state"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -806,7 +806,7 @@ import (
 Replace the secure check with:
 
 ```go
-	if !runtimeconf.Current.Snapshot().IsSecure {
+	if !state.Current.Snapshot().IsSecure {
 		return
 	}
 ```
@@ -820,7 +820,7 @@ func CheckLevel(c *gin.Context) {
 	filePath := strings.TrimPrefix(c.Param("filename"), constant.FileGroupPrefix)
 	c.Set("filename", filePath)
 
-	cfg := runtimeconf.Current.Snapshot()
+	cfg := state.Current.Snapshot()
 	isD := isDir(cfg.RootPath, filePath)
 	c.Set("isDirectory", isD)
 	isFile := !isD
@@ -852,14 +852,14 @@ func isOverLevel(rootPath string, maxLevel uint8, relPath string, isFile bool, i
 }
 ```
 
-Add `github.com/tcp404/OneTiny/internal/runtimeconf` to imports and remove `internal/conf`.
+Add `github.com/tcp404/OneTiny/internal/state` to imports and remove `internal/conf`.
 
 - [ ] **Step 3: Update download handler root path**
 
 In `internal/handle/core/download.go`, inside `Downloader`:
 
 ```go
-	cfg := runtimeconf.Current.Snapshot()
+	cfg := state.Current.Snapshot()
 	road := c.GetString("filename")
 	a := &agent{
 		abs:    filepath.Join(cfg.RootPath, road),
@@ -869,14 +869,14 @@ In `internal/handle/core/download.go`, inside `Downloader`:
 	}
 ```
 
-Update `readDir`, `getFileInfos`, and directory zip path to use `runtimeconf.Current.Snapshot().RootPath` instead of `conf.Config.RootPath`.
+Update `readDir`, `getFileInfos`, and directory zip path to use `state.Current.Snapshot().RootPath` instead of `conf.Current().RootPath`.
 
 - [ ] **Step 4: Update upload handler**
 
 In `internal/handle/core/upload.go`, read runtime config:
 
 ```go
-	cfg := runtimeconf.Current.Snapshot()
+	cfg := state.Current.Snapshot()
 	if !cfg.IsAllowUpload {
 		handle.ErrorHandle(c, "当前未开启上传")
 		return
@@ -898,7 +898,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit runtime wiring**
 
 ```bash
-git add internal/runtimeconf internal/server internal/server/middleware internal/handle/core
+git add internal/state internal/server internal/server/middleware internal/handle/core
 git commit -m "feat: apply runtime config to handlers"
 ```
 
@@ -1127,14 +1127,14 @@ Modify `internal/handle/secure/login.go` to write semantic login logs:
 
 ```go
 func LoginPost(c *gin.Context) {
-	success := c.PostForm("username") == conf.Config.Username &&
-		security.VerifyPassword(conf.Config.Password, c.PostForm("password")) == nil
+	success := c.PostForm("username") == conf.Current().Username &&
+		security.VerifyPassword(conf.Current().PasswordHash, c.PostForm("password")) == nil
 	result := accesslog.ResultFailure
 	code := 0
 	message := "登录失败"
 	if success {
 		session := sessions.Default(c)
-		session.Set("login", conf.Config.SessionVal)
+		session.Set("login", conf.Current().SessionVal)
 		session.Save()
 		result = accesslog.ResultSuccess
 		code = 1

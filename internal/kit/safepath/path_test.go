@@ -1,4 +1,4 @@
-package runtimeconf
+package safepath
 
 import (
 	"os"

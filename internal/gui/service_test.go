@@ -6,7 +6,7 @@ import (
 
 	"github.com/tcp404/OneTiny/internal/conf"
 	"github.com/tcp404/OneTiny/internal/control"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 type fakeDialogAdapter struct {
@@ -112,9 +112,8 @@ func TestServiceConfirmQuitStopsSharingWhenConfirmedAsynchronously(t *testing.T)
 func runningGUIService(t *testing.T) (*control.Controller, *Service, *fakeDialogAdapter) {
 	t.Helper()
 	resetGUIControlTest(t)
-	conf.Config.RootPath = t.TempDir()
-	conf.Config.IP = "127.0.0.1"
-	conf.Config.Port = freeGUIPort(t)
+	conf.UnsafeCurrentForTest().RootPath = t.TempDir()
+	conf.UnsafeCurrentForTest().Port = freeGUIPort(t)
 
 	controller := control.NewController()
 	if _, err := controller.StartSharing(); err != nil {
@@ -129,15 +128,15 @@ func runningGUIService(t *testing.T) (*control.Controller, *Service, *fakeDialog
 
 func resetGUIControlTest(t *testing.T) {
 	t.Helper()
-	original := *conf.Config
-	originalRuntime := runtimeconf.Current()
-	runtimeconf.SetCurrent(nil)
-	conf.Config.IsSecure = false
-	conf.Config.Username = ""
-	conf.Config.Password = ""
+	original := *conf.UnsafeCurrentForTest()
+	originalRuntime := state.Current()
+	state.SetCurrent(nil)
+	conf.UnsafeCurrentForTest().IsSecure = false
+	conf.UnsafeCurrentForTest().Username = ""
+	conf.UnsafeCurrentForTest().PasswordHash = ""
 	t.Cleanup(func() {
-		runtimeconf.SetCurrent(originalRuntime)
-		*conf.Config = original
+		state.SetCurrent(originalRuntime)
+		*conf.UnsafeCurrentForTest() = original
 	})
 }
 

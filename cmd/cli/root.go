@@ -6,15 +6,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/tcp404/OneTiny/internal/conf"
 	"github.com/tcp404/OneTiny/internal/constant"
 	"github.com/tcp404/OneTiny/internal/kit/chain"
 	"github.com/tcp404/OneTiny/internal/kit/verify"
+	"github.com/tcp404/OneTiny/internal/state"
 
 	"github.com/urfave/cli/v2"
 )
 
-func initCLI() {
+func initCLI(output io.Writer) {
 	cli.VersionFlag = &cli.BoolFlag{
 		Name:    "version",
 		Aliases: []string{"v"},
@@ -33,49 +33,62 @@ func initCLI() {
 		cli.HelpPrinterCustom(w, temp, data, nil)
 		os.Exit(0)
 	}
-	cli.ErrWriter = conf.Config.Output
+	cli.ErrWriter = output
 }
 
 // CLI 函数作为程序入口，主要负责处理命令和 flag
-func CLI() *cli.App {
-	initCLI()
+func CLI(runtimeState *state.RuntimeConfig) *cli.App {
+	defaults := runtimeState.Snapshot()
+	initCLI(defaults.Output)
 
 	return &cli.App{
 		Name:            "OneTiny",
 		Usage:           "一个用于局域网内共享文件的FTP程序",
 		UsageText:       "onetiny [GLOBAL OPTIONS] COMMAND [COMMAND OPTIONS] [参数...]",
 		Version:         constant.VERSION,
-		Flags:           newGlobalFlag(),
+		Flags:           newGlobalFlag(defaults),
 		Authors:         []*cli.Author{{Name: "Boii", Email: "i@tcp404.com"}},
-		Commands:        []*cli.Command{updateCmd(), configCmd(), secureCmd()},
+		Commands:        []*cli.Command{updateCmd(), configCmd(defaults), secureCmd()},
 		CommandNotFound: func(c *cli.Context, s string) { cli.ShowAppHelpAndExit(c, 10) },
-		Writer:          conf.Config.Output,
-		ErrWriter:       conf.Config.Output,
-		After:           afterRootAction,
-		Action:          rootAction,
+		Writer:          defaults.Output,
+		ErrWriter:       defaults.Output,
+		After: func(c *cli.Context) error {
+			return afterRootAction(runtimeState)
+		},
+		Action: func(c *cli.Context) error {
+			return rootAction(c, runtimeState)
+		},
 	}
 }
 
-func afterRootAction(c *cli.Context) error {
+func afterRootAction(runtimeState *state.RuntimeConfig) error {
+	snapshot := runtimeState.Snapshot()
 	return chain.NewHandleChain().
-		AddToHead(verify.NewPortVerifier(conf.Config.Port)).
-		AddToHead(verify.NewPathVerifier(conf.Config.RootPath)).
+		AddToHead(verify.NewPortVerifier(snapshot.Port)).
+		AddToHead(verify.NewPathVerifier(snapshot.RootPath)).
 		Iterator()
 }
 
-func rootAction(c *cli.Context) error {
-	conf.Config.Port = c.Int("port")
-	conf.Config.MaxLevel = uint8(c.Int("max"))
-	conf.Config.IsAllowUpload = c.Bool("allow")
-	conf.Config.IsSecure = c.Bool("secure")
+func rootAction(c *cli.Context, runtimeState *state.RuntimeConfig) error {
+	port := c.Int("port")
+	maxLevel := uint8(c.Int("max"))
+	allowUpload := c.Bool("allow")
+	secure := c.Bool("secure")
+	patch := state.ConfigPatch{
+		Port:          &port,
+		MaxLevel:      &maxLevel,
+		IsAllowUpload: &allowUpload,
+		IsSecure:      &secure,
+	}
 	if c.IsSet("road") {
 		road := c.Path("road")
 		if road[0] == '.' {
 			pwd, _ := os.Getwd()
 			road = filepath.Join(pwd, road)
 		}
-		conf.Config.RootPath = road
+		patch.RootPath = &road
 	}
+	runtimeState.Update(patch)
 	// 开启登录的时候查一下是否有设置账号密码
 	// if c.IsSet("secure") {
 

@@ -6,8 +6,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 
-	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 func CheckLogin(c *gin.Context) {
@@ -29,14 +28,13 @@ func CheckLogin(c *gin.Context) {
 }
 
 func sessionVal() string {
-	val := conf.Config.SessionVal
-	cfg := runtimeconf.Current()
+	cfg := state.Current()
 	if cfg == nil {
-		return val
+		return state.SnapshotFromCurrentConfig().SessionVal
 	}
 
 	if runtimeVal := cfg.Snapshot().SessionVal; runtimeVal != "" {
-		val = runtimeVal
+		return runtimeVal
 	}
-	return val
+	return state.SnapshotFromCurrentConfig().SessionVal
 }

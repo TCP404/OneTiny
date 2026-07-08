@@ -4,10 +4,12 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
+	"github.com/tcp404/OneTiny/internal/conf"
 	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/urfave/cli/v2"
 )
@@ -15,7 +17,22 @@ import (
 func resetSecureTestViper(t *testing.T) {
 	t.Helper()
 	viper.Reset()
-	t.Cleanup(viper.Reset)
+	cfgFile := filepath.Join(t.TempDir(), "config.yml")
+	if err := os.WriteFile(cfgFile, nil, 0o600); err != nil {
+		t.Fatalf("write config file: %v", err)
+	}
+	viper.SetConfigFile(cfgFile)
+	viper.SetConfigType("yml")
+	viper.SetDefault("account.secure", false)
+	viper.SetDefault("account.custom.user", "")
+	viper.SetDefault("account.custom.pass_hash", "")
+	viper.SetDefault("account.custom.pass_hash_algo", "")
+	viper.SetDefault("account.custom.pass", "")
+	*conf.UnsafeCurrentForTest() = conf.Config{}
+	t.Cleanup(func() {
+		*conf.UnsafeCurrentForTest() = conf.Config{}
+		viper.Reset()
+	})
 }
 
 func newSecureTestContext(t *testing.T, values map[string]string) *cli.Context {
@@ -332,7 +349,8 @@ account:
 		t.Fatalf("ReadInConfig after secure command: %v", readErr)
 	}
 	if got := viper.GetBool("account.secure"); got {
-		t.Fatal("account.secure was not disabled in config file")
+		content, _ := os.ReadFile(path)
+		t.Fatalf("account.secure was not disabled in config file:\n%s", string(content))
 	}
 }
 

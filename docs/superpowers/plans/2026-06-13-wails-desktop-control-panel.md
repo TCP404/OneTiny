@@ -19,7 +19,7 @@
 
 ## File Structure
 
-- `internal/runtimeconf/config.go`: extend runtime snapshots with login credential fields so GUI credential changes affect new login attempts without restarting the server.
+- `internal/state/config.go`: extend runtime snapshots with login credential fields so GUI credential changes affect new login attempts without restarting the server.
 - `internal/server/server.go`: route CLI startup through `ServiceManager` helper path so CLI and GUI share the same lifecycle code.
 - `internal/server/manager.go`: add `ApplyRuntimeConfig`, `Config`, and address helpers needed by GUI status.
 - `internal/handle/secure/login.go`: read credentials from request runtime snapshot instead of only `conf.Config`.
@@ -104,7 +104,7 @@ type LogEntryDTO struct {
 ## Task 1: Runtime Credentials And Unified Lifecycle
 
 **Files:**
-- Modify: `internal/runtimeconf/config.go`
+- Modify: `internal/state/config.go`
 - Modify: `internal/server/server.go`
 - Modify: `internal/server/manager.go`
 - Modify: `internal/handle/secure/login.go`
@@ -122,9 +122,9 @@ func TestLoginPostUsesRuntimeCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HashPassword returned error: %v", err)
 	}
-	conf.Config.Username = "global-user"
-	conf.Config.Password = "$2a$10$YJCMw3VjB9FlGm8zJbv8we8z0N1P6l4L7jXWaCOc3SNH0WcEjPzNe"
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	conf.UnsafeCurrentForTest().Username = "global-user"
+	conf.UnsafeCurrentForTest().PasswordHash = "$2a$10$YJCMw3VjB9FlGm8zJbv8we8z0N1P6l4L7jXWaCOc3SNH0WcEjPzNe"
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		Username:     "runtime-user",
 		PasswordHash: hash,
 		SessionVal:   "runtime-session",
@@ -159,7 +159,7 @@ Expected: FAIL because `ConfigSnapshot` has no credential fields or login ignore
 
 - [ ] **Step 3: Extend runtime config snapshot**
 
-In `internal/runtimeconf/config.go`, update the structs:
+In `internal/state/config.go`, update the structs:
 
 ```go
 type ConfigSnapshot struct {
@@ -193,17 +193,17 @@ Add the matching assignments in `RuntimeConfig.Update`.
 In `internal/server/server.go`, update `snapshotFromGlobalConfig`:
 
 ```go
-func snapshotFromGlobalConfig() runtimeconf.ConfigSnapshot {
-	return runtimeconf.ConfigSnapshot{
-		RootPath:      conf.Config.RootPath,
-		Port:          conf.Config.Port,
-		MaxLevel:      conf.Config.MaxLevel,
-		IsAllowUpload: conf.Config.IsAllowUpload,
-		IsSecure:      conf.Config.IsSecure,
-		IP:            conf.Config.IP,
-		Username:      conf.Config.Username,
-		PasswordHash:  conf.Config.Password,
-		SessionVal:    conf.Config.SessionVal,
+func snapshotFromGlobalConfig() state.ConfigSnapshot {
+	return state.ConfigSnapshot{
+		RootPath:      conf.Current().RootPath,
+		Port:          conf.Current().Port,
+		MaxLevel:      conf.Current().MaxLevel,
+		IsAllowUpload: conf.Current().IsAllowUpload,
+		IsSecure:      conf.Current().IsSecure,
+		IP:            conf.Current().IP,
+		Username:      conf.Current().Username,
+		PasswordHash:  conf.Current().PasswordHash,
+		SessionVal:    conf.Current().SessionVal,
 	}
 }
 ```
@@ -235,17 +235,17 @@ type loginCredentialSnapshot struct {
 }
 
 func loginSnapshot() loginCredentialSnapshot {
-	cfg := runtimeconf.Current()
+	cfg := state.Current()
 	if cfg == nil {
 		return loginCredentialSnapshot{
-			Username:     conf.Config.Username,
-			PasswordHash: conf.Config.Password,
-			SessionVal:   conf.Config.SessionVal,
+			Username:     conf.Current().Username,
+			PasswordHash: conf.Current().PasswordHash,
+			SessionVal:   conf.Current().SessionVal,
 		}
 	}
 	snapshot := cfg.Snapshot()
 	if snapshot.SessionVal == "" {
-		snapshot.SessionVal = conf.Config.SessionVal
+		snapshot.SessionVal = conf.Current().SessionVal
 	}
 	return loginCredentialSnapshot{
 		Username:     snapshot.Username,
@@ -258,7 +258,7 @@ func loginSnapshot() loginCredentialSnapshot {
 Add the missing import:
 
 ```go
-"github.com/tcp404/OneTiny/internal/runtimeconf"
+"github.com/tcp404/OneTiny/internal/state"
 ```
 
 - [ ] **Step 6: Add manager lifecycle helper tests**
@@ -267,7 +267,7 @@ In `internal/server/manager_test.go`, add:
 
 ```go
 func TestServiceManagerApplyRuntimeConfig(t *testing.T) {
-	cfg := runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	cfg := state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: t.TempDir(),
 		Port:     freeTestPort(t),
 		MaxLevel: 0,
@@ -277,7 +277,7 @@ func TestServiceManagerApplyRuntimeConfig(t *testing.T) {
 	nextRoot := t.TempDir()
 	upload := true
 	level := uint8(2)
-	manager.ApplyRuntimeConfig(runtimeconf.ConfigPatch{
+	manager.ApplyRuntimeConfig(state.ConfigPatch{
 		RootPath:      &nextRoot,
 		IsAllowUpload: &upload,
 		MaxLevel:      &level,
@@ -295,7 +295,7 @@ func TestServiceManagerApplyRuntimeConfig(t *testing.T) {
 In `internal/server/manager.go`, add:
 
 ```go
-func (m *ServiceManager) ApplyRuntimeConfig(patch runtimeconf.ConfigPatch) error {
+func (m *ServiceManager) ApplyRuntimeConfig(patch state.ConfigPatch) error {
 	if m.cfg == nil {
 		return ErrRuntimeConfigRequired
 	}
@@ -303,7 +303,7 @@ func (m *ServiceManager) ApplyRuntimeConfig(patch runtimeconf.ConfigPatch) error
 	return nil
 }
 
-func (m *ServiceManager) Config() *runtimeconf.RuntimeConfig {
+func (m *ServiceManager) Config() *state.RuntimeConfig {
 	return m.cfg
 }
 ```
@@ -314,7 +314,7 @@ In `internal/server/server.go`, rewrite `RunCore` to use `ServiceManager` while 
 
 ```go
 func RunCore() {
-	cfg := runtimeconf.NewRuntimeConfig(snapshotFromGlobalConfig())
+	cfg := state.NewRuntimeConfig(snapshotFromGlobalConfig())
 	manager := NewServiceManager(cfg)
 	if err := manager.Start(); err != nil {
 		log.Println(color.RedString(err.Error()))
@@ -340,7 +340,7 @@ Remove `initServer`, `run`, and `exit` only after confirming no code references 
 Run:
 
 ```bash
-go test -count=1 ./internal/runtimeconf ./internal/server ./internal/handle/secure
+go test -count=1 ./internal/state ./internal/server ./internal/handle/secure
 go test -count=1 ./...
 git diff --check
 ```
@@ -350,7 +350,7 @@ Expected: PASS and no diff check output.
 - [ ] **Step 10: Commit task 1**
 
 ```bash
-git add internal/runtimeconf internal/server internal/handle/secure
+git add internal/state internal/server internal/handle/secure
 git commit -m "feat: share runtime credentials and lifecycle"
 ```
 
@@ -408,18 +408,18 @@ import (
 	"testing"
 
 	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 func TestControllerStartStopAndStatus(t *testing.T) {
 	resetControllerTest(t)
 	port := freeControlTestPort(t)
 	root := t.TempDir()
-	conf.Config.RootPath = root
-	conf.Config.Port = port
-	conf.Config.MaxLevel = 1
-	conf.Config.IsAllowUpload = false
-	conf.Config.IsSecure = false
+	conf.UnsafeCurrentForTest().RootPath = root
+	conf.UnsafeCurrentForTest().Port = port
+	conf.UnsafeCurrentForTest().MaxLevel = 1
+	conf.UnsafeCurrentForTest().IsAllowUpload = false
+	conf.UnsafeCurrentForTest().IsSecure = false
 
 	controller := NewController()
 	status, err := controller.GetStatus()
@@ -445,7 +445,7 @@ func TestControllerStartStopAndStatus(t *testing.T) {
 	if status.Running {
 		t.Fatalf("stopped status running = true, want false")
 	}
-	runtimeconf.SetCurrent(nil)
+	state.SetCurrent(nil)
 }
 ```
 
@@ -458,8 +458,8 @@ func TestControllerUpdateConfigHotAndPortRestart(t *testing.T) {
 	resetControllerTest(t)
 	controller := NewController()
 	root := t.TempDir()
-	conf.Config.RootPath = root
-	conf.Config.Port = freeControlTestPort(t)
+	conf.UnsafeCurrentForTest().RootPath = root
+	conf.UnsafeCurrentForTest().Port = freeControlTestPort(t)
 
 	if _, err := controller.StartSharing(); err != nil {
 		t.Fatalf("StartSharing returned error: %v", err)
@@ -505,8 +505,8 @@ func TestControllerSetCredentialsEnablesSecure(t *testing.T) {
 	if !status.HasCredentials || !status.Config.IsSecure {
 		t.Fatalf("credential status = %+v, want configured and secure enabled", status)
 	}
-	if conf.Config.Username != "admin" {
-		t.Fatalf("conf username = %q, want admin", conf.Config.Username)
+	if conf.Current().Username != "admin" {
+		t.Fatalf("conf username = %q, want admin", conf.Current().Username)
 	}
 }
 ```
@@ -541,7 +541,7 @@ import (
 
 	"github.com/tcp404/OneTiny/internal/accesslog"
 	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/state"
 	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/tcp404/OneTiny/internal/server"
 	"github.com/spf13/viper"
@@ -549,7 +549,7 @@ import (
 
 type Controller struct {
 	mu      sync.Mutex
-	cfg     *runtimeconf.RuntimeConfig
+	cfg     *state.RuntimeConfig
 	manager *server.ServiceManager
 	logger  *accesslog.Logger
 	lastErr string
@@ -557,7 +557,7 @@ type Controller struct {
 
 func NewController() *Controller {
 	snapshot := snapshotFromConf()
-	cfg := runtimeconf.NewRuntimeConfig(snapshot)
+	cfg := state.NewRuntimeConfig(snapshot)
 	return &Controller{
 		cfg:     cfg,
 		manager: server.NewServiceManager(cfg),
@@ -598,7 +598,7 @@ func (c *Controller) UpdateConfig(patch ConfigPatchDTO) (StatusDTO, error) {
 	defer c.mu.Unlock()
 	if patch.Port != nil && *patch.Port != c.cfg.Snapshot().Port && !patch.RestartPort {
 		viper.Set("server.port", *patch.Port)
-		conf.Config.Port = *patch.Port
+		conf.UnsafeCurrentForTest().Port = *patch.Port
 		c.lastErr = ErrPortRestartRequiresConfirm.Error()
 		status := c.statusLocked()
 		status.PortRestartRequired = true
@@ -636,15 +636,15 @@ func (c *Controller) SetCredentials(patch CredentialPatchDTO) (StatusDTO, error)
 	if err := viper.WriteConfig(); err != nil {
 		return c.statusLocked(), err
 	}
-	conf.Config.Username = patch.Username
-	conf.Config.Password = hash
+	conf.UnsafeCurrentForTest().Username = patch.Username
+	conf.UnsafeCurrentForTest().PasswordHash = hash
 	if patch.EnableSecure {
-		conf.Config.IsSecure = true
+		conf.UnsafeCurrentForTest().IsSecure = true
 	}
-	c.cfg.Update(runtimeconf.ConfigPatch{
+	c.cfg.Update(state.ConfigPatch{
 		Username:     &patch.Username,
 		PasswordHash: &hash,
-		IsSecure:     boolPtr(conf.Config.IsSecure),
+		IsSecure:     boolPtr(conf.Current().IsSecure),
 	})
 	return c.statusLocked(), nil
 }
@@ -726,36 +726,36 @@ func (c *Controller) statusLocked() StatusDTO {
 Add these helper functions in the same file:
 
 ```go
-func snapshotFromConf() runtimeconf.ConfigSnapshot {
-	return runtimeconf.ConfigSnapshot{
-		RootPath:      conf.Config.RootPath,
-		Port:          conf.Config.Port,
-		MaxLevel:      conf.Config.MaxLevel,
-		IsAllowUpload: conf.Config.IsAllowUpload,
-		IsSecure:      conf.Config.IsSecure,
-		IP:            conf.Config.IP,
-		Username:      conf.Config.Username,
-		PasswordHash:  conf.Config.Password,
-		SessionVal:    conf.Config.SessionVal,
+func snapshotFromConf() state.ConfigSnapshot {
+	return state.ConfigSnapshot{
+		RootPath:      conf.Current().RootPath,
+		Port:          conf.Current().Port,
+		MaxLevel:      conf.Current().MaxLevel,
+		IsAllowUpload: conf.Current().IsAllowUpload,
+		IsSecure:      conf.Current().IsSecure,
+		IP:            conf.Current().IP,
+		Username:      conf.Current().Username,
+		PasswordHash:  conf.Current().PasswordHash,
+		SessionVal:    conf.Current().SessionVal,
 	}
 }
 
 func persistConfigPatch(patch ConfigPatchDTO) error {
 	if patch.RootPath != nil {
 		viper.Set("server.road", *patch.RootPath)
-		conf.Config.RootPath = *patch.RootPath
+		conf.UnsafeCurrentForTest().RootPath = *patch.RootPath
 	}
 	if patch.Port != nil {
 		viper.Set("server.port", *patch.Port)
-		conf.Config.Port = *patch.Port
+		conf.UnsafeCurrentForTest().Port = *patch.Port
 	}
 	if patch.MaxLevel != nil {
 		viper.Set("server.max_level", int(*patch.MaxLevel))
-		conf.Config.MaxLevel = *patch.MaxLevel
+		conf.UnsafeCurrentForTest().MaxLevel = *patch.MaxLevel
 	}
 	if patch.IsAllowUpload != nil {
 		viper.Set("server.allow_upload", *patch.IsAllowUpload)
-		conf.Config.IsAllowUpload = *patch.IsAllowUpload
+		conf.UnsafeCurrentForTest().IsAllowUpload = *patch.IsAllowUpload
 	}
 	if patch.IsSecure != nil {
 		if *patch.IsSecure {
@@ -764,13 +764,13 @@ func persistConfigPatch(patch ConfigPatchDTO) error {
 			}
 		}
 		viper.Set("account.secure", *patch.IsSecure)
-		conf.Config.IsSecure = *patch.IsSecure
+		conf.UnsafeCurrentForTest().IsSecure = *patch.IsSecure
 	}
 	return viper.WriteConfig()
 }
 
-func runtimePatchFromDTO(patch ConfigPatchDTO) runtimeconf.ConfigPatch {
-	return runtimeconf.ConfigPatch{
+func runtimePatchFromDTO(patch ConfigPatchDTO) state.ConfigPatch {
+	return state.ConfigPatch{
 		RootPath:      patch.RootPath,
 		Port:          patch.Port,
 		MaxLevel:      patch.MaxLevel,
@@ -779,7 +779,7 @@ func runtimePatchFromDTO(patch ConfigPatchDTO) runtimeconf.ConfigPatch {
 	}
 }
 
-func configDTOFromSnapshot(snapshot runtimeconf.ConfigSnapshot) ConfigDTO {
+func configDTOFromSnapshot(snapshot state.ConfigSnapshot) ConfigDTO {
 	return ConfigDTO{
 		RootPath:      snapshot.RootPath,
 		Port:          snapshot.Port,
@@ -789,7 +789,7 @@ func configDTOFromSnapshot(snapshot runtimeconf.ConfigSnapshot) ConfigDTO {
 	}
 }
 
-func addressFromSnapshot(snapshot runtimeconf.ConfigSnapshot, running bool) string {
+func addressFromSnapshot(snapshot state.ConfigSnapshot, running bool) string {
 	if !running {
 		return ""
 	}
@@ -846,7 +846,7 @@ func resetControllerTest(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		*conf.Config = originalConfig
-		runtimeconf.SetCurrent(nil)
+		state.SetCurrent(nil)
 		viper.Reset()
 		for _, key := range originalViper.AllKeys() {
 			viper.Set(key, originalViper.Get(key))
@@ -2019,7 +2019,7 @@ Run:
 
 ```bash
 go test -count=1 ./...
-go test -race -count=1 ./internal/control ./internal/runtimeconf ./internal/server ./internal/server/middleware ./internal/handle/core ./internal/handle/secure ./internal/accesslog ./internal/security ./internal/conf ./cmd
+go test -race -count=1 ./internal/control ./internal/state ./internal/server ./internal/server/middleware ./internal/handle/core ./internal/handle/secure ./internal/accesslog ./internal/security ./internal/conf ./cmd
 cd frontend && npm run build && cd ..
 go build ./...
 wails3 build

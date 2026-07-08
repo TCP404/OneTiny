@@ -6,7 +6,6 @@ import (
 	"errors"
 
 	"github.com/fatih/color"
-	"github.com/spf13/viper"
 	"github.com/tcp404/OneTiny/internal/conf"
 	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/urfave/cli/v2"
@@ -45,10 +44,7 @@ func secureCmd() *cli.Command {
 				return cli.Exit(color.RedString(err.Error()), 21)
 			}
 			if !hasSecureFlag(c) {
-				return cli.Exit(color.GreenString("当前访问登录是否已开启: %t", viper.GetBool("account.secure")), 0)
-			}
-			if err := viper.WriteConfig(); err != nil {
-				return cli.Exit(color.RedString("配置文件写入失败～"), 22)
+				return cli.Exit(color.GreenString("当前访问登录是否已开启: %t", conf.Current().IsSecure), 0)
 			}
 			return cli.Exit(color.GreenString("设置成功~"), 0)
 		},
@@ -75,33 +71,42 @@ const (
 
 func secureAction(c *cli.Context) (ups, error) {
 	var weight ups
-	credentials := conf.CredentialConfigFromViper()
+	if _, err := conf.RefreshCurrent(); err != nil {
+		return weight, err
+	}
+	current := conf.Current()
+	credentials := conf.CredentialConfigFromConfig(current)
+	var patch conf.SecurityPatch
 
 	// 当填写了 -s 选项并且 -s 的值为 true 时才设置
 	secureIsSet, secureValue := c.IsSet("secure"), c.Bool("secure")
-	effectiveSecure := viper.GetBool("account.secure")
+	effectiveSecure := current.IsSecure
 	if secureIsSet {
 		if secureValue {
 			weight |= SECU
 		}
 		effectiveSecure = secureValue
+		patch.IsSecure = &secureValue
 	}
 
 	// 当填写了 -u 选项并且 -u 的值不为 空 时才设置
 	if is, u := c.IsSet("user"), c.String("user"); is && u != "" {
 		weight |= USER
 		credentials.Username = u
+		patch.Username = &u
 	}
 	// 当填写了 -p 选项并且 -p 的值不为 空 时才设置
 	if is, p := c.IsSet("pass"), c.String("pass"); is && p != "" {
 		weight |= PASS
 		hash, err := security.HashPassword(p)
 		if err != nil {
+			conf.RestoreInMemory(current)
 			return weight, err
 		}
 		credentials.PasswordHash = hash
 		credentials.HashAlgo = security.HashAlgoBcrypt
 		credentials.LegacyMD5 = ""
+		patch.PasswordHash = &hash
 	}
 
 	if effectiveSecure {
@@ -114,15 +119,10 @@ func secureAction(c *cli.Context) (ups, error) {
 		}
 	}
 
-	if secureIsSet {
-		viper.Set("account.secure", secureValue)
-	}
-
-	if weight&USER != 0 {
-		viper.Set("account.custom.user", credentials.Username)
-	}
-	if weight&PASS != 0 {
-		conf.SetCredentialConfig(credentials.Username, credentials.PasswordHash)
+	if hasSecureFlag(c) {
+		if _, err := conf.SaveSecurityPatch(patch); err != nil {
+			return weight, err
+		}
 	}
 	return weight, nil
 }
@@ -142,7 +142,7 @@ func secureAction(c *cli.Context) (ups, error) {
 // 设置密码时，需配置文件中已设置账户
 // 设置账户时，需配置文件中已设置密码
 func Handle(weight ups) error {
-	return handleCredentialConfig(weight, conf.CredentialConfigFromViper())
+	return handleCredentialConfig(weight, conf.CredentialConfigFromConfig(conf.Current()))
 }
 
 func handleCredentialConfig(weight ups, credentials security.CredentialConfig) error {

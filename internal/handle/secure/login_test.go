@@ -14,21 +14,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/tcp404/OneTiny/internal/accesslog"
 	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
 	"github.com/tcp404/OneTiny/internal/security"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 func resetLoginTestConfig(t *testing.T) *accesslog.Logger {
 	t.Helper()
-	original := *conf.Config
-	originalRuntime := runtimeconf.Current()
-	runtimeconf.SetCurrent(nil)
+	original := *conf.UnsafeCurrentForTest()
+	originalRuntime := state.Current()
+	state.SetCurrent(nil)
 	logger := accesslog.New(filepath.Join(t.TempDir(), "access.log"))
 	restoreLogger := accesslog.SetLoggerForTest(logger)
 	t.Cleanup(func() {
 		restoreLogger()
-		runtimeconf.SetCurrent(originalRuntime)
-		*conf.Config = original
+		state.SetCurrent(originalRuntime)
+		*conf.UnsafeCurrentForTest() = original
 	})
 	return logger
 }
@@ -49,9 +49,8 @@ func TestLoginPostVerifiesPlainUsernameAndBcryptPassword(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HashPassword returned error: %v", err)
 	}
-	conf.Config.Username = "admin"
-	conf.Config.Password = hash
-	conf.Config.SessionVal = "session-value"
+	conf.UnsafeCurrentForTest().Username = "admin"
+	conf.UnsafeCurrentForTest().PasswordHash = hash
 
 	body, rec := postLogin(t, "admin", "secret")
 
@@ -74,8 +73,8 @@ func TestLoginPostRejectsWrongPassword(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HashPassword returned error: %v", err)
 	}
-	conf.Config.Username = "admin"
-	conf.Config.Password = hash
+	conf.UnsafeCurrentForTest().Username = "admin"
+	conf.UnsafeCurrentForTest().PasswordHash = hash
 
 	body, _ := postLogin(t, "admin", "wrong")
 
@@ -91,9 +90,8 @@ func TestLoginPostWritesSuccessAndFailureEvents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HashPassword returned error: %v", err)
 	}
-	conf.Config.Username = "admin"
-	conf.Config.Password = hash
-	conf.Config.SessionVal = "session-value"
+	conf.UnsafeCurrentForTest().Username = "admin"
+	conf.UnsafeCurrentForTest().PasswordHash = hash
 
 	postLogin(t, "admin", "secret")
 	postLogin(t, "admin", "wrong")
@@ -131,9 +129,9 @@ func TestLoginPostUsesRuntimeCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HashPassword returned error: %v", err)
 	}
-	conf.Config.Username = "global-user"
-	conf.Config.Password = "$2a$10$YJCMw3VjB9FlGm8zJbv8we8z0N1P6l4L7jXWaCOc3SNH0WcEjPzNe"
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	conf.UnsafeCurrentForTest().Username = "global-user"
+	conf.UnsafeCurrentForTest().PasswordHash = "$2a$10$YJCMw3VjB9FlGm8zJbv8we8z0N1P6l4L7jXWaCOc3SNH0WcEjPzNe"
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		Username:     "runtime-user",
 		PasswordHash: hash,
 		SessionVal:   "runtime-session",
@@ -162,10 +160,9 @@ func TestLoginPostFallsBackToGlobalCredentialsWhenRuntimeCredentialsEmpty(t *tes
 	if err != nil {
 		t.Fatalf("HashPassword returned error: %v", err)
 	}
-	conf.Config.Username = "global-user"
-	conf.Config.Password = hash
-	conf.Config.SessionVal = "global-session"
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	conf.UnsafeCurrentForTest().Username = "global-user"
+	conf.UnsafeCurrentForTest().PasswordHash = hash
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: t.TempDir(),
 		Port:     9090,
 		MaxLevel: 2,

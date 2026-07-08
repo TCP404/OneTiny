@@ -6,9 +6,8 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/tcp404/OneTiny/internal/accesslog"
-	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
 	"github.com/tcp404/OneTiny/internal/security"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 // LoginGet 接收 GET /login 请求,返回登录页面
@@ -43,13 +42,14 @@ type loginCredentialSnapshot struct {
 }
 
 func loginSnapshot() loginCredentialSnapshot {
+	fallback := state.SnapshotFromCurrentConfig()
 	result := loginCredentialSnapshot{
-		Username:     conf.Config.Username,
-		PasswordHash: conf.Config.Password,
-		SessionVal:   conf.Config.SessionVal,
+		Username:     fallback.Username,
+		PasswordHash: fallback.PasswordHash,
+		SessionVal:   fallback.SessionVal,
 	}
 
-	cfg := runtimeconf.Current()
+	cfg := state.Current()
 	if cfg == nil {
 		return result
 	}

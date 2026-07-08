@@ -6,14 +6,15 @@ import (
 	"sync/atomic"
 
 	"github.com/tcp404/OneTiny/internal/control"
+	"github.com/tcp404/OneTiny/internal/state"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 const singleInstanceID = "com.tcp404.onetiny.gui"
 
-func Run(assets embed.FS) error {
-	controller := control.NewController()
+func Run(assets embed.FS, state *state.RuntimeConfig) error {
+	controller := control.NewControllerWithState(state)
 	service := NewService(controller, nil)
 	var quitting atomic.Bool
 

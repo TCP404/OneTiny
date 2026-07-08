@@ -15,14 +15,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/tcp404/OneTiny/internal/accesslog"
 	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
 	"github.com/tcp404/OneTiny/internal/server/middleware"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 func resetCoreRuntimeTest(t *testing.T) *accesslog.Logger {
 	t.Helper()
 
-	originalConfig := *conf.Config
+	originalConfig := *conf.UnsafeCurrentForTest()
 	originalMode := gin.Mode()
 	logger := accesslog.New(filepath.Join(t.TempDir(), "access.log"))
 	restoreLogger := accesslog.SetLoggerForTest(logger)
@@ -30,8 +30,8 @@ func resetCoreRuntimeTest(t *testing.T) *accesslog.Logger {
 	gin.SetMode(gin.TestMode)
 	t.Cleanup(func() {
 		restoreLogger()
-		*conf.Config = originalConfig
-		runtimeconf.SetCurrent(nil)
+		*conf.UnsafeCurrentForTest() = originalConfig
+		state.SetCurrent(nil)
 		gin.SetMode(originalMode)
 	})
 	return logger
@@ -41,9 +41,9 @@ func TestUploaderRejectsWhenRuntimeDisallowsUpload(t *testing.T) {
 	resetCoreRuntimeTest(t)
 
 	root := t.TempDir()
-	conf.Config.RootPath = root
-	conf.Config.IsAllowUpload = true
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	conf.UnsafeCurrentForTest().RootPath = root
+	conf.UnsafeCurrentForTest().IsAllowUpload = true
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath:      root,
 		IsAllowUpload: false,
 	}))
@@ -66,8 +66,8 @@ func TestUploaderSavesToRuntimeRootPath(t *testing.T) {
 
 	globalRoot := t.TempDir()
 	runtimeRoot := t.TempDir()
-	conf.Config.RootPath = globalRoot
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	conf.UnsafeCurrentForTest().RootPath = globalRoot
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath:      runtimeRoot,
 		IsAllowUpload: true,
 	}))
@@ -97,7 +97,7 @@ func TestUploaderRejectsEscapedUploadPath(t *testing.T) {
 	if err := os.Mkdir(outside, 0o755); err != nil {
 		t.Fatalf("mkdir outside: %v", err)
 	}
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath:      root,
 		IsAllowUpload: true,
 	}))
@@ -116,7 +116,7 @@ func TestUploaderSanitizesUploadedFilename(t *testing.T) {
 	resetCoreRuntimeTest(t)
 
 	root := t.TempDir()
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath:      root,
 		IsAllowUpload: true,
 	}))
@@ -139,14 +139,14 @@ func TestDownloaderReadsFromRuntimeRootPath(t *testing.T) {
 
 	globalRoot := t.TempDir()
 	runtimeRoot := t.TempDir()
-	conf.Config.RootPath = globalRoot
+	conf.UnsafeCurrentForTest().RootPath = globalRoot
 	if err := os.WriteFile(filepath.Join(globalRoot, "hello.txt"), []byte("global"), 0o600); err != nil {
 		t.Fatalf("write global file: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(runtimeRoot, "hello.txt"), []byte("runtime"), 0o600); err != nil {
 		t.Fatalf("write runtime file: %v", err)
 	}
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: runtimeRoot,
 	}))
 
@@ -175,7 +175,7 @@ func TestDownloaderWritesDownloadSuccessAfterOpeningFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "hello.txt"), []byte("runtime"), 0o600); err != nil {
 		t.Fatalf("write runtime file: %v", err)
 	}
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: root,
 	}))
 
@@ -203,7 +203,7 @@ func TestDownloaderWritesFailureWhenResponseWriteFails(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "hello.txt"), []byte("runtime"), 0o600); err != nil {
 		t.Fatalf("write runtime file: %v", err)
 	}
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: root,
 	}))
 
@@ -240,7 +240,7 @@ func TestDownloaderWritesDownloadSuccessAfterZippingDirectory(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("zip me"), 0o600); err != nil {
 		t.Fatalf("write docs file: %v", err)
 	}
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: root,
 		MaxLevel: 1,
 	}))
@@ -273,14 +273,14 @@ func TestDownloaderUsesSnapshotFromCheckLevelContext(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(rootB, "hello.txt"), []byte("root-b"), 0o600); err != nil {
 		t.Fatalf("write rootB file: %v", err)
 	}
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: rootA,
 		MaxLevel: 0,
 	}))
 
 	r := gin.New()
 	r.GET("/file/*filename", middleware.CheckLevel, func(c *gin.Context) {
-		runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+		state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 			RootPath: rootB,
 			MaxLevel: 0,
 		}))
@@ -311,7 +311,7 @@ func TestCheckLevelAndDownloaderPreserveFilePathSegment(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "file", "hello.txt"), []byte("nested file"), 0o600); err != nil {
 		t.Fatalf("write nested hello: %v", err)
 	}
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: root,
 		MaxLevel: 1,
 	}))
@@ -343,7 +343,7 @@ func TestCheckLevelAndDownloaderRejectSymlinkEscape(t *testing.T) {
 		t.Fatalf("write outside file: %v", err)
 	}
 	symlinkOrSkip(t, outside, filepath.Join(root, "link.txt"))
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: root,
 		MaxLevel: 0,
 	}))
@@ -362,7 +362,7 @@ func TestCheckLevelAndDownloaderMissingFileDoesNotPanic(t *testing.T) {
 	resetCoreRuntimeTest(t)
 
 	root := t.TempDir()
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: root,
 		MaxLevel: 0,
 	}))
@@ -387,7 +387,7 @@ func TestUploaderRejectsParentSymlinkEscape(t *testing.T) {
 		t.Fatalf("mkdir outside: %v", err)
 	}
 	symlinkOrSkip(t, outside, filepath.Join(root, "uploads"))
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath:      root,
 		IsAllowUpload: true,
 	}))
@@ -415,7 +415,7 @@ func TestUploaderRejectsExistingTargetSymlink(t *testing.T) {
 		t.Fatalf("write outside file: %v", err)
 	}
 	symlinkOrSkip(t, outside, filepath.Join(root, "target.txt"))
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath:      root,
 		IsAllowUpload: true,
 	}))
@@ -434,7 +434,7 @@ func TestUploaderWritesRejectAndSuccessEvents(t *testing.T) {
 	logger := resetCoreRuntimeTest(t)
 
 	root := t.TempDir()
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath:      root,
 		IsAllowUpload: false,
 	}))
@@ -443,7 +443,7 @@ func TestUploaderWritesRejectAndSuccessEvents(t *testing.T) {
 		t.Fatalf("blocked status = %d, want %d; body=%q", blocked.Code, http.StatusInternalServerError, blocked.Body.String())
 	}
 
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath:      root,
 		IsAllowUpload: true,
 	}))

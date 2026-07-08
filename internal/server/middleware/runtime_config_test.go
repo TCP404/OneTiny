@@ -12,19 +12,19 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 func resetMiddlewareRuntimeTest(t *testing.T) {
 	t.Helper()
 
-	originalConfig := *conf.Config
+	originalConfig := *conf.UnsafeCurrentForTest()
 	originalMode := gin.Mode()
 
 	gin.SetMode(gin.TestMode)
 	t.Cleanup(func() {
-		*conf.Config = originalConfig
-		runtimeconf.SetCurrent(nil)
+		*conf.UnsafeCurrentForTest() = originalConfig
+		state.SetCurrent(nil)
 		gin.SetMode(originalMode)
 	})
 }
@@ -32,8 +32,8 @@ func resetMiddlewareRuntimeTest(t *testing.T) {
 func TestCheckLoginUsesRuntimeSecureFlag(t *testing.T) {
 	resetMiddlewareRuntimeTest(t)
 
-	conf.Config.IsSecure = true
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	conf.UnsafeCurrentForTest().IsSecure = true
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		IsSecure: false,
 	}))
 
@@ -47,8 +47,8 @@ func TestCheckLoginUsesRuntimeSecureFlag(t *testing.T) {
 func TestCheckLoginRedirectsWhenRuntimeSecureAndSessionMissing(t *testing.T) {
 	resetMiddlewareRuntimeTest(t)
 
-	conf.Config.IsSecure = false
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	conf.UnsafeCurrentForTest().IsSecure = false
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		IsSecure: true,
 	}))
 
@@ -65,9 +65,8 @@ func TestCheckLoginRedirectsWhenRuntimeSecureAndSessionMissing(t *testing.T) {
 func TestCheckLoginUsesRuntimeSessionVal(t *testing.T) {
 	resetMiddlewareRuntimeTest(t)
 
-	conf.Config.IsSecure = false
-	conf.Config.SessionVal = "global-session"
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	conf.UnsafeCurrentForTest().IsSecure = false
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		IsSecure:   true,
 		SessionVal: "runtime-session",
 	}))
@@ -82,9 +81,8 @@ func TestCheckLoginUsesRuntimeSessionVal(t *testing.T) {
 func TestCheckLoginRejectsGlobalSessionWhenRuntimeSessionValSet(t *testing.T) {
 	resetMiddlewareRuntimeTest(t)
 
-	conf.Config.IsSecure = false
-	conf.Config.SessionVal = "global-session"
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	conf.UnsafeCurrentForTest().IsSecure = false
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		IsSecure:   true,
 		SessionVal: "runtime-session",
 	}))
@@ -104,8 +102,8 @@ func TestCheckLevelUsesRuntimeRootForDirectoryDetection(t *testing.T) {
 
 	globalRoot := t.TempDir()
 	runtimeRoot := t.TempDir()
-	conf.Config.RootPath = globalRoot
-	conf.Config.MaxLevel = 5
+	conf.UnsafeCurrentForTest().RootPath = globalRoot
+	conf.UnsafeCurrentForTest().MaxLevel = 5
 
 	if err := os.WriteFile(filepath.Join(globalRoot, "docs"), []byte("file"), 0o600); err != nil {
 		t.Fatalf("write global docs file: %v", err)
@@ -113,7 +111,7 @@ func TestCheckLevelUsesRuntimeRootForDirectoryDetection(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(runtimeRoot, "docs"), 0o755); err != nil {
 		t.Fatalf("mkdir runtime docs: %v", err)
 	}
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: runtimeRoot,
 		MaxLevel: 5,
 	}))
@@ -132,9 +130,9 @@ func TestCheckLevelMissingPathDoesNotPanic(t *testing.T) {
 	resetMiddlewareRuntimeTest(t)
 
 	root := t.TempDir()
-	conf.Config.RootPath = root
-	conf.Config.MaxLevel = 0
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	conf.UnsafeCurrentForTest().RootPath = root
+	conf.UnsafeCurrentForTest().MaxLevel = 0
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: root,
 		MaxLevel: 0,
 	}))
@@ -153,12 +151,12 @@ func TestCheckLevelUsesRuntimeMaxLevel(t *testing.T) {
 	resetMiddlewareRuntimeTest(t)
 
 	root := t.TempDir()
-	conf.Config.RootPath = root
-	conf.Config.MaxLevel = 5
+	conf.UnsafeCurrentForTest().RootPath = root
+	conf.UnsafeCurrentForTest().MaxLevel = 5
 	if err := os.Mkdir(filepath.Join(root, "nested"), 0o755); err != nil {
 		t.Fatalf("mkdir nested: %v", err)
 	}
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: root,
 		MaxLevel: 0,
 	}))
@@ -184,7 +182,7 @@ func TestCheckLevelRejectsEscapedPath(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(parent, "secret.txt"), []byte("secret"), 0o600); err != nil {
 		t.Fatalf("write secret: %v", err)
 	}
-	runtimeconf.SetCurrent(runtimeconf.NewRuntimeConfig(runtimeconf.ConfigSnapshot{
+	state.SetCurrent(state.NewRuntimeConfig(state.ConfigSnapshot{
 		RootPath: root,
 		MaxLevel: 5,
 	}))

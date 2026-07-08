@@ -6,13 +6,16 @@ import (
 	"github.com/tcp404/OneTiny/internal/conf"
 	"github.com/tcp404/OneTiny/internal/gui"
 	"github.com/tcp404/OneTiny/internal/gui/webassets"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 func main() {
-	if err := conf.LoadConfig(); err != nil {
+	cfg, err := conf.LoadConfig()
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := gui.Run(webassets.Assets); err != nil {
+	state := state.NewRuntimeConfig(state.SnapshotFromConfig(cfg, state.NewProcessState()))
+	if err := gui.Run(webassets.Assets, state); err != nil {
 		log.Fatal(err)
 	}
 }

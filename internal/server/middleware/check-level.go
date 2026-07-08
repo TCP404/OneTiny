@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/tcp404/OneTiny/internal/constant"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/kit/safepath"
+	"github.com/tcp404/OneTiny/internal/state"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,10 +27,10 @@ import (
 //	x: /a/b/c/d/e/file	根目录下第三层目录下的文件
 func CheckLevel(c *gin.Context) {
 	cfg := currentSnapshot()
-	c.Set(runtimeconf.ContextKey, cfg)
+	c.Set(state.ContextKey, cfg)
 
 	rawFilePath := parseWildcardFilename(c.Param("filename"))
-	target, ok := runtimeconf.ResolveWithinRoot(cfg.RootPath, rawFilePath)
+	target, ok := safepath.ResolveWithinRoot(cfg.RootPath, rawFilePath)
 	if !ok {
 		c.String(http.StatusNotFound, "访问超出允许范围，请返回！")
 		c.Abort()
@@ -38,7 +39,7 @@ func CheckLevel(c *gin.Context) {
 	filePath := cleanRelPath(rawFilePath)
 
 	if pathExists(target) {
-		if _, ok := runtimeconf.ResolveExistingWithinRoot(cfg.RootPath, filePath); !ok {
+		if _, ok := safepath.ResolveExistingWithinRoot(cfg.RootPath, filePath); !ok {
 			c.String(http.StatusNotFound, "访问超出允许范围，请返回！")
 			c.Abort()
 			return
@@ -80,7 +81,7 @@ func isDir(rootPath, filePath string) bool {
 	if filePath == constant.ROOT {
 		return true
 	}
-	target, ok := runtimeconf.ResolveExistingWithinRoot(rootPath, filePath)
+	target, ok := safepath.ResolveExistingWithinRoot(rootPath, filePath)
 	if !ok {
 		return false
 	}
@@ -97,12 +98,12 @@ func isOverLevel(rootPath string, maxLevel uint8, relPath string, isFile bool, i
 	if err != nil {
 		return true
 	}
-	target, ok := runtimeconf.ResolveWithinRoot(rootPath, relPath)
+	target, ok := safepath.ResolveWithinRoot(rootPath, relPath)
 	if !ok {
 		return true
 	}
 	if pathExists(target) {
-		target, ok = runtimeconf.ResolveExistingWithinRoot(rootPath, relPath)
+		target, ok = safepath.ResolveExistingWithinRoot(rootPath, relPath)
 		if !ok {
 			return true
 		}

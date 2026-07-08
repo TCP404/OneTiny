@@ -2,30 +2,22 @@ package core
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
-func currentSnapshot(c *gin.Context) runtimeconf.ConfigSnapshot {
+func currentSnapshot(c *gin.Context) state.ConfigSnapshot {
 	if c != nil {
-		if value, ok := c.Get(runtimeconf.ContextKey); ok {
-			if snapshot, ok := value.(runtimeconf.ConfigSnapshot); ok {
+		if value, ok := c.Get(state.ContextKey); ok {
+			if snapshot, ok := value.(state.ConfigSnapshot); ok {
 				return snapshot
 			}
 		}
 	}
 
-	cfg := runtimeconf.Current()
+	cfg := state.Current()
 	if cfg != nil {
 		return cfg.Snapshot()
 	}
 
-	return runtimeconf.ConfigSnapshot{
-		RootPath:      conf.Config.RootPath,
-		Port:          conf.Config.Port,
-		MaxLevel:      conf.Config.MaxLevel,
-		IsAllowUpload: conf.Config.IsAllowUpload,
-		IsSecure:      conf.Config.IsSecure,
-		IP:            conf.Config.IP,
-	}
+	return state.SnapshotFromCurrentConfig()
 }

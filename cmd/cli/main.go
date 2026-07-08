@@ -8,6 +8,7 @@ import (
 	"github.com/tcp404/OneTiny/internal/kit/chain"
 	"github.com/tcp404/OneTiny/internal/kit/verify"
 	"github.com/tcp404/OneTiny/internal/server"
+	"github.com/tcp404/OneTiny/internal/state"
 
 	"github.com/fatih/color"
 )
@@ -20,24 +21,27 @@ func main() {
 		}
 	}()
 
-	if err = conf.LoadConfig(); err != nil {
+	cfg, err := conf.LoadConfig()
+	if err != nil {
+		return
+	}
+	state := state.NewRuntimeConfig(state.SnapshotFromConfig(cfg, state.NewProcessState()))
+
+	if err = CLI(state).Run(os.Args); err != nil {
 		return
 	}
 
-	if err = CLI().Run(os.Args); err != nil {
-		return
-	}
-
-	if err = conf.ValidateSecureConfigFor(conf.Config.IsSecure); err != nil {
+	snapshot := state.Snapshot()
+	if err = conf.ValidateSecureConfigFor(snapshot.IsSecure); err != nil {
 		return
 	}
 
 	if err = chain.NewHandleChain().
-		AddToHead(verify.NewPortVerifier(conf.Config.Port)).
-		AddToHead(verify.NewPathVerifier(conf.Config.RootPath)).
+		AddToHead(verify.NewPortVerifier(snapshot.Port)).
+		AddToHead(verify.NewPathVerifier(snapshot.RootPath)).
 		Iterator(); err != nil {
 		return
 	}
 
-	server.RunCore()
+	server.RunCore(state)
 }

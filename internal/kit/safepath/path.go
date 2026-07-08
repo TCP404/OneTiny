@@ -1,12 +1,10 @@
-package runtimeconf
+package safepath
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 )
-
-const ContextKey = "runtimeConfigSnapshot"
 
 func ResolveWithinRoot(rootPath string, elems ...string) (string, bool) {
 	cleanRoot, err := filepath.Abs(rootPath)

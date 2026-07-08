@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
-	"github.com/tcp404/OneTiny/internal/conf"
 	"github.com/tcp404/OneTiny/internal/constant"
 
 	"github.com/fatih/color"
@@ -110,7 +110,7 @@ func (u *update) updateVersion(version string) error {
 	}
 
 	// 检查当前系统是 linux 还是 mac 还是 windows决定 Assets 用哪个,然后进行下载
-	name, ok := constant.ReleaseName[conf.Config.OS]
+	name, ok := constant.ReleaseName[runtime.GOOS]
 	if !ok {
 		u.msg = color.YellowString("暂时没有适合您的系统的版本，请自行下载编译")
 		return nil
@@ -134,7 +134,7 @@ func (u *update) updateVersion(version string) error {
 	p, err := os.UserHomeDir()
 	if err != nil {
 		u.msg = color.HiYellowString("获取 Home 目录失败")
-		p = conf.Config.Pwd
+		p, _ = os.Getwd()
 	}
 	path := filepath.Join(p, assert.Name)
 	errs = eutil.DownloadBinary(assert.DownloadURL, path)

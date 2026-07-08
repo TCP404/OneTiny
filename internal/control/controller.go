@@ -11,18 +11,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spf13/viper"
 	"github.com/tcp404/OneTiny/internal/accesslog"
 	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
 	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/tcp404/OneTiny/internal/server"
-	"gopkg.in/yaml.v3"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 type Controller struct {
 	mu                  sync.Mutex
-	cfg                 *runtimeconf.RuntimeConfig
+	cfg                 *state.RuntimeConfig
 	manager             *server.ServiceManager
 	logger              *accesslog.Logger
 	lastErr             string
@@ -31,14 +29,21 @@ type Controller struct {
 }
 
 var (
-	restartServiceWithSnapshot = func(manager *server.ServiceManager, snapshot runtimeconf.ConfigSnapshot, commit func() error) error {
+	restartServiceWithSnapshot = func(manager *server.ServiceManager, snapshot state.ConfigSnapshot, commit func() error) error {
 		return manager.RestartWithSnapshot(snapshot, commit)
 	}
-	atomicWriteConfigFile = atomicWriteFile
 )
 
 func NewController() *Controller {
-	cfg := runtimeconf.NewRuntimeConfig(snapshotFromConf())
+	process := state.NewProcessState()
+	process.IP = "127.0.0.1"
+	if process.SessionVal == "" {
+		process.SessionVal = "test-session"
+	}
+	return NewControllerWithState(state.NewRuntimeConfig(state.SnapshotFromConfig(conf.Current(), process)))
+}
+
+func NewControllerWithState(cfg *state.RuntimeConfig) *Controller {
 	return &Controller{
 		cfg:     cfg,
 		manager: server.NewServiceManager(cfg),
@@ -76,10 +81,10 @@ func (c *Controller) StopSharing() (StatusDTO, error) {
 		c.lastErr = err.Error()
 		return c.statusLocked(), err
 	}
-	runtimeconf.SetCurrent(nil)
+	state.SetCurrent(nil)
 	if c.portRestartRequired || c.pendingPort != nil {
-		port := conf.Config.Port
-		if err := c.manager.ApplyRuntimeConfig(runtimeconf.ConfigPatch{Port: &port}); err != nil {
+		port := conf.Current().Port
+		if err := c.manager.ApplyRuntimeConfig(state.ConfigPatch{Port: &port}); err != nil {
 			c.lastErr = err.Error()
 			return c.statusLocked(), err
 		}
@@ -105,10 +110,14 @@ func (c *Controller) UpdateConfig(patch ConfigPatchDTO) (StatusDTO, error) {
 		persistPatch.Port = &targetPort
 	}
 	if confirmPort && portChanged {
-		targetSnapshot := snapshotWithPatch(active, persistPatch)
-		if err := restartServiceWithSnapshot(c.manager, targetSnapshot, func() error {
-			return persistConfigPatch(persistPatch)
-		}); err != nil {
+		savedSnapshot, err := persistConfigPatch(persistPatch, state.ProcessStateFromSnapshot(active))
+		if err != nil {
+			c.pendingPort = nil
+			c.portRestartRequired = true
+			c.lastErr = err.Error()
+			return c.statusLocked(), err
+		}
+		if err := restartServiceWithSnapshot(c.manager, savedSnapshot, nil); err != nil {
 			c.resetPendingPortFailureLocked(active.Port)
 			c.lastErr = err.Error()
 			return c.statusLocked(), err
@@ -119,12 +128,13 @@ func (c *Controller) UpdateConfig(patch ConfigPatchDTO) (StatusDTO, error) {
 		return c.statusLocked(), nil
 	}
 
-	if err := persistConfigPatch(persistPatch); err != nil {
+	savedSnapshot, err := persistConfigPatch(persistPatch, state.ProcessStateFromSnapshot(active))
+	if err != nil {
 		c.lastErr = err.Error()
 		return c.statusLocked(), err
 	}
 
-	runtimePatch := runtimePatchFromDTO(persistPatch)
+	runtimePatch := runtimePatchFromSnapshot(active, savedSnapshot)
 	if running && hasPortTarget && !confirmPort {
 		runtimePatch.Port = nil
 	}
@@ -184,27 +194,24 @@ func (c *Controller) SetCredentials(patch CredentialPatchDTO) (StatusDTO, error)
 		return c.statusLocked(), err
 	}
 
-	rollback := captureViperKeys("account.secure", "account.custom.user", "account.custom.pass_hash", "account.custom.pass_hash_algo", "account.custom.pass")
-	conf.SetCredentialConfig(username, hash)
-	if patch.EnableSecure {
-		viper.Set("account.secure", true)
+	securityPatch := conf.SecurityPatch{
+		Username:     &username,
+		PasswordHash: &hash,
 	}
-	if err := writeCurrentViperConfigAtomic(); err != nil {
-		rollback.restore()
+	if patch.EnableSecure {
+		securityPatch.IsSecure = &patch.EnableSecure
+	}
+	savedConfig, err := conf.SaveSecurityPatch(securityPatch)
+	if err != nil {
 		c.lastErr = err.Error()
 		return c.statusLocked(), err
 	}
-
-	conf.Config.Username = username
-	conf.Config.Password = hash
-	if patch.EnableSecure {
-		conf.Config.IsSecure = true
-	}
-	secure := conf.Config.IsSecure
-	if err := c.manager.ApplyRuntimeConfig(runtimeconf.ConfigPatch{
-		Username:     &username,
-		PasswordHash: &hash,
-		IsSecure:     &secure,
+	active := c.cfg.Snapshot()
+	savedSnapshot := state.SnapshotFromConfig(savedConfig, state.ProcessStateFromSnapshot(active))
+	if err := c.manager.ApplyRuntimeConfig(state.ConfigPatch{
+		Username:     &savedSnapshot.Username,
+		PasswordHash: &savedSnapshot.PasswordHash,
+		IsSecure:     &savedSnapshot.IsSecure,
 	}); err != nil {
 		c.lastErr = err.Error()
 		return c.statusLocked(), err
@@ -295,12 +302,12 @@ func (c *Controller) statusLocked() StatusDTO {
 	}
 }
 
-func (c *Controller) portTargetLocked(patch ConfigPatchDTO, active runtimeconf.ConfigSnapshot) (int, bool) {
+func (c *Controller) portTargetLocked(patch ConfigPatchDTO, active state.ConfigSnapshot) (int, bool) {
 	if patch.RestartPort && c.pendingPort != nil {
 		return *c.pendingPort, true
 	}
-	if patch.RestartPort && c.portRestartRequired && conf.Config.Port != active.Port {
-		return conf.Config.Port, true
+	if savedPort := conf.Current().Port; patch.RestartPort && c.portRestartRequired && savedPort != active.Port {
+		return savedPort, true
 	}
 	if patch.Port != nil {
 		return *patch.Port, true
@@ -308,7 +315,7 @@ func (c *Controller) portTargetLocked(patch ConfigPatchDTO, active runtimeconf.C
 	return 0, false
 }
 
-func (c *Controller) configDTOLocked(snapshot runtimeconf.ConfigSnapshot) ConfigDTO {
+func (c *Controller) configDTOLocked(snapshot state.ConfigSnapshot) ConfigDTO {
 	dto := configDTOFromSnapshot(snapshot)
 	if c.pendingPort != nil {
 		dto.Port = *c.pendingPort
@@ -317,71 +324,27 @@ func (c *Controller) configDTOLocked(snapshot runtimeconf.ConfigSnapshot) Config
 }
 
 func (c *Controller) resetPendingPortFailureLocked(activePort int) {
-	viper.Set("server.port", activePort)
-	conf.Config.Port = activePort
+	if _, err := conf.SavePatch(conf.ConfigPatch{Port: &activePort}); err != nil {
+		c.lastErr = err.Error()
+	}
 	c.pendingPort = nil
 	c.portRestartRequired = true
 }
 
-func snapshotFromConf() runtimeconf.ConfigSnapshot {
-	return runtimeconf.ConfigSnapshot{
-		RootPath:      conf.Config.RootPath,
-		Port:          conf.Config.Port,
-		MaxLevel:      conf.Config.MaxLevel,
-		IsAllowUpload: conf.Config.IsAllowUpload,
-		IsSecure:      conf.Config.IsSecure,
-		IP:            conf.Config.IP,
-		Username:      conf.Config.Username,
-		PasswordHash:  conf.Config.Password,
-		SessionVal:    conf.Config.SessionVal,
-	}
+func snapshotFromConf() state.ConfigSnapshot {
+	return state.SnapshotFromConfig(conf.Current(), state.NewProcessState())
 }
 
-func persistConfigPatch(patch ConfigPatchDTO) error {
-	rollback := captureViperKeys(
-		"server.road",
-		"server.port",
-		"server.max_level",
-		"server.allow_upload",
-		"account.secure",
-	)
-	originalConfig := *conf.Config
-
-	if patch.IsSecure != nil && *patch.IsSecure {
-		if err := conf.ValidateSecureConfigFor(true); err != nil {
-			return err
-		}
+func persistConfigPatch(patch ConfigPatchDTO, process state.ProcessState) (state.ConfigSnapshot, error) {
+	cfg, err := conf.SavePatch(confPatchFromDTO(patch))
+	if err != nil {
+		return state.ConfigSnapshot{}, err
 	}
-	if patch.RootPath != nil {
-		viper.Set("server.road", *patch.RootPath)
-		conf.Config.RootPath = *patch.RootPath
-	}
-	if patch.Port != nil {
-		viper.Set("server.port", *patch.Port)
-		conf.Config.Port = *patch.Port
-	}
-	if patch.MaxLevel != nil {
-		viper.Set("server.max_level", int(*patch.MaxLevel))
-		conf.Config.MaxLevel = *patch.MaxLevel
-	}
-	if patch.IsAllowUpload != nil {
-		viper.Set("server.allow_upload", *patch.IsAllowUpload)
-		conf.Config.IsAllowUpload = *patch.IsAllowUpload
-	}
-	if patch.IsSecure != nil {
-		viper.Set("account.secure", *patch.IsSecure)
-		conf.Config.IsSecure = *patch.IsSecure
-	}
-	if err := writeCurrentViperConfigAtomic(); err != nil {
-		rollback.restore()
-		*conf.Config = originalConfig
-		return err
-	}
-	return nil
+	return state.SnapshotFromConfig(cfg, process), nil
 }
 
-func runtimePatchFromDTO(patch ConfigPatchDTO) runtimeconf.ConfigPatch {
-	return runtimeconf.ConfigPatch{
+func confPatchFromDTO(patch ConfigPatchDTO) conf.ConfigPatch {
+	return conf.ConfigPatch{
 		RootPath:      patch.RootPath,
 		Port:          patch.Port,
 		MaxLevel:      patch.MaxLevel,
@@ -390,7 +353,27 @@ func runtimePatchFromDTO(patch ConfigPatchDTO) runtimeconf.ConfigPatch {
 	}
 }
 
-func snapshotWithPatch(snapshot runtimeconf.ConfigSnapshot, patch ConfigPatchDTO) runtimeconf.ConfigSnapshot {
+func runtimePatchFromSnapshot(old, next state.ConfigSnapshot) state.ConfigPatch {
+	patch := state.ConfigPatch{}
+	if old.RootPath != next.RootPath {
+		patch.RootPath = &next.RootPath
+	}
+	if old.Port != next.Port {
+		patch.Port = &next.Port
+	}
+	if old.MaxLevel != next.MaxLevel {
+		patch.MaxLevel = &next.MaxLevel
+	}
+	if old.IsAllowUpload != next.IsAllowUpload {
+		patch.IsAllowUpload = &next.IsAllowUpload
+	}
+	if old.IsSecure != next.IsSecure {
+		patch.IsSecure = &next.IsSecure
+	}
+	return patch
+}
+
+func snapshotWithPatch(snapshot state.ConfigSnapshot, patch ConfigPatchDTO) state.ConfigSnapshot {
 	if patch.RootPath != nil {
 		snapshot.RootPath = *patch.RootPath
 	}
@@ -409,7 +392,7 @@ func snapshotWithPatch(snapshot runtimeconf.ConfigSnapshot, patch ConfigPatchDTO
 	return snapshot
 }
 
-func configDTOFromSnapshot(snapshot runtimeconf.ConfigSnapshot) ConfigDTO {
+func configDTOFromSnapshot(snapshot state.ConfigSnapshot) ConfigDTO {
 	return ConfigDTO{
 		RootPath:      snapshot.RootPath,
 		Port:          snapshot.Port,
@@ -419,7 +402,7 @@ func configDTOFromSnapshot(snapshot runtimeconf.ConfigSnapshot) ConfigDTO {
 	}
 }
 
-func addressFromSnapshot(snapshot runtimeconf.ConfigSnapshot, running bool) string {
+func addressFromSnapshot(snapshot state.ConfigSnapshot, running bool) string {
 	if !running {
 		return ""
 	}
@@ -430,7 +413,7 @@ func addressFromSnapshot(snapshot runtimeconf.ConfigSnapshot, running bool) stri
 	return fmt.Sprintf("http://%s:%d", host, snapshot.Port)
 }
 
-func hasCredentials(snapshot runtimeconf.ConfigSnapshot) bool {
+func hasCredentials(snapshot state.ConfigSnapshot) bool {
 	return security.CredentialConfig{
 		Username:     snapshot.Username,
 		PasswordHash: snapshot.PasswordHash,
@@ -463,77 +446,4 @@ func timeValue(value *time.Time) time.Time {
 
 func intPtr(value int) *int {
 	return &value
-}
-
-type viperRollback struct {
-	values map[string]any
-}
-
-func captureViperKeys(keys ...string) viperRollback {
-	values := make(map[string]any, len(keys))
-	for _, key := range keys {
-		values[key] = viper.Get(key)
-	}
-	return viperRollback{values: values}
-}
-
-func (r viperRollback) restore() {
-	for key, value := range r.values {
-		viper.Set(key, value)
-	}
-}
-
-func writeCurrentViperConfigAtomic() error {
-	path := viper.ConfigFileUsed()
-	if strings.TrimSpace(path) == "" {
-		var err error
-		path, err = conf.ConfigPath()
-		if err != nil {
-			return err
-		}
-	}
-	data, err := yaml.Marshal(viper.AllSettings())
-	if err != nil {
-		return err
-	}
-	return atomicWriteConfigFile(path, data)
-}
-
-func atomicWriteFile(path string, data []byte) error {
-	if strings.TrimSpace(path) == "" {
-		return ErrInvalidExportPath
-	}
-	dir := filepath.Dir(path)
-	temp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp-*")
-	if err != nil {
-		return err
-	}
-	tempPath := temp.Name()
-	removeTemp := true
-	defer func() {
-		if removeTemp {
-			_ = os.Remove(tempPath)
-		}
-	}()
-
-	if _, err := temp.Write(data); err != nil {
-		_ = temp.Close()
-		return err
-	}
-	if err := temp.Sync(); err != nil {
-		_ = temp.Close()
-		return err
-	}
-	if err := temp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tempPath, path); err != nil {
-		return err
-	}
-	removeTemp = false
-	if dirFile, err := os.Open(dir); err == nil {
-		_ = dirFile.Sync()
-		_ = dirFile.Close()
-	}
-	return nil
 }

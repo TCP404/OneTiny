@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 
 type ServiceManager struct {
 	mu       sync.Mutex
-	cfg      *runtimeconf.RuntimeConfig
+	cfg      *state.RuntimeConfig
 	srv      *http.Server
 	listener net.Listener
 	done     chan error
@@ -31,7 +31,7 @@ type ServiceManager struct {
 
 var buildHTTPServer = defaultBuildHTTPServer
 
-func NewServiceManager(cfg *runtimeconf.RuntimeConfig) *ServiceManager {
+func NewServiceManager(cfg *state.RuntimeConfig) *ServiceManager {
 	return &ServiceManager{cfg: cfg}
 }
 
@@ -55,7 +55,7 @@ func (m *ServiceManager) Start() error {
 	m.listener = listener
 	m.done = done
 
-	runtimeconf.SetCurrent(m.cfg)
+	state.SetCurrent(m.cfg)
 	go m.serve(srv, listener, done)
 	return nil
 }
@@ -109,7 +109,7 @@ func (m *ServiceManager) Restart() error {
 	return m.Start()
 }
 
-func (m *ServiceManager) RestartWithSnapshot(snapshot runtimeconf.ConfigSnapshot, commit func() error) error {
+func (m *ServiceManager) RestartWithSnapshot(snapshot state.ConfigSnapshot, commit func() error) error {
 	if m.cfg == nil {
 		return ErrRuntimeConfigRequired
 	}
@@ -152,7 +152,7 @@ func (m *ServiceManager) RestartWithSnapshot(snapshot runtimeconf.ConfigSnapshot
 	m.listener = nextListener
 	m.done = nextDone
 	applySnapshot(m.cfg, snapshot)
-	runtimeconf.SetCurrent(m.cfg)
+	state.SetCurrent(m.cfg)
 	m.mu.Unlock()
 
 	closeNext = false
@@ -161,7 +161,7 @@ func (m *ServiceManager) RestartWithSnapshot(snapshot runtimeconf.ConfigSnapshot
 	return nil
 }
 
-func (m *ServiceManager) ApplyRuntimeConfig(patch runtimeconf.ConfigPatch) error {
+func (m *ServiceManager) ApplyRuntimeConfig(patch state.ConfigPatch) error {
 	if m.cfg == nil {
 		return ErrRuntimeConfigRequired
 	}
@@ -169,7 +169,7 @@ func (m *ServiceManager) ApplyRuntimeConfig(patch runtimeconf.ConfigPatch) error
 	return nil
 }
 
-func (m *ServiceManager) Config() *runtimeconf.RuntimeConfig {
+func (m *ServiceManager) Config() *state.RuntimeConfig {
 	return m.cfg
 }
 
@@ -187,9 +187,9 @@ func (m *ServiceManager) Running() bool {
 	return m.srv != nil && !m.stopping
 }
 
-func (m *ServiceManager) Status() runtimeconf.ConfigSnapshot {
+func (m *ServiceManager) Status() state.ConfigSnapshot {
 	if m.cfg == nil {
-		return runtimeconf.ConfigSnapshot{}
+		return state.ConfigSnapshot{}
 	}
 	return m.cfg.Snapshot()
 }
@@ -211,7 +211,7 @@ func (m *ServiceManager) serve(srv *http.Server, listener net.Listener, done cha
 	done <- err
 }
 
-func prepareServer(snapshot runtimeconf.ConfigSnapshot) (*http.Server, net.Listener, error) {
+func prepareServer(snapshot state.ConfigSnapshot) (*http.Server, net.Listener, error) {
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(snapshot.Port))
 	if err != nil {
 		return nil, nil, fmt.Errorf("start server: %w", err)
@@ -260,8 +260,8 @@ func shutdownPrevious(srv *http.Server, listener net.Listener, done <-chan error
 	return serveErr
 }
 
-func applySnapshot(cfg *runtimeconf.RuntimeConfig, snapshot runtimeconf.ConfigSnapshot) {
-	cfg.Update(runtimeconf.ConfigPatch{
+func applySnapshot(cfg *state.RuntimeConfig, snapshot state.ConfigSnapshot) {
+	cfg.Update(state.ConfigPatch{
 		RootPath:      &snapshot.RootPath,
 		Port:          &snapshot.Port,
 		MaxLevel:      &snapshot.MaxLevel,

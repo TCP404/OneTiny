@@ -15,13 +15,13 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/eutil"
+
 	"github.com/tcp404/OneTiny/internal/accesslog"
-	"github.com/tcp404/OneTiny/internal/conf"
 	"github.com/tcp404/OneTiny/internal/constant"
 	"github.com/tcp404/OneTiny/internal/handle"
-	"github.com/tcp404/OneTiny/internal/progress"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
-	"github.com/tcp404/eutil"
+	"github.com/tcp404/OneTiny/internal/kit/progress"
+	"github.com/tcp404/OneTiny/internal/kit/safepath"
 )
 
 type fileStructure struct {
@@ -45,19 +45,20 @@ type agent struct {
 	isDir       bool
 	rootPath    string
 	allowUpload bool
+	output      io.Writer
 }
 
 func Downloader(c *gin.Context) {
 	cfg := currentSnapshot(c)
 	road := c.GetString("filename")
-	abs, ok := runtimeconf.ResolveWithinRoot(cfg.RootPath, road)
+	abs, ok := safepath.ResolveWithinRoot(cfg.RootPath, road)
 	if !ok {
 		c.String(http.StatusNotFound, "访问超出允许范围，请返回！")
 		c.Abort()
 		return
 	}
 	if _, err := os.Lstat(abs); err == nil {
-		abs, ok = runtimeconf.ResolveExistingWithinRoot(cfg.RootPath, road)
+		abs, ok = safepath.ResolveExistingWithinRoot(cfg.RootPath, road)
 		if !ok {
 			c.String(http.StatusNotFound, "访问超出允许范围，请返回！")
 			c.Abort()
@@ -75,6 +76,7 @@ func Downloader(c *gin.Context) {
 		isDir:       c.GetBool("isDirectory"),
 		rootPath:    cfg.RootPath,
 		allowUpload: cfg.IsAllowUpload,
+		output:      cfg.Output,
 	}
 
 	if a.rel == constant.ROOT {
@@ -106,7 +108,7 @@ func (a *agent) file(c *gin.Context) {
 	}
 
 	buf := make([]byte, constant.BufferLimit)
-	bar := progress.GetBar(a.rel, contentLen, conf.Config.Output)
+	bar := progress.GetBar(a.rel, contentLen, a.outputOrDefault())
 
 	// 小于 buf 时直接读取到 buf 中然后返回
 	if contentLen < int64(len(buf)) {
@@ -259,7 +261,7 @@ func buildBreadcrumbs(rel string) []pathCrumb {
 
 func (a *agent) flush(c *gin.Context, src io.Reader, buf []byte) error {
 	data := bufio.NewReader(src)
-	bar := progress.GetBar(a.rel, getContentLen(a.abs), conf.Config.Output)
+	bar := progress.GetBar(a.rel, getContentLen(a.abs), a.outputOrDefault())
 
 	for {
 		n, err := data.Read(buf)
@@ -281,6 +283,13 @@ func (a *agent) flush(c *gin.Context, src io.Reader, buf []byte) error {
 		}
 	}
 	return nil
+}
+
+func (a *agent) outputOrDefault() io.Writer {
+	if a.output != nil {
+		return a.output
+	}
+	return os.Stderr
 }
 
 func getContentLen(absPath string) int64 {

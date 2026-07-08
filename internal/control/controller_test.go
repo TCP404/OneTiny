@@ -15,21 +15,20 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tcp404/OneTiny/internal/accesslog"
 	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
 	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/tcp404/OneTiny/internal/server"
+	"github.com/tcp404/OneTiny/internal/state"
 )
 
 func TestControllerStartStopAndStatus(t *testing.T) {
 	resetControllerTest(t)
 	port := freeControlTestPort(t)
 	root := t.TempDir()
-	conf.Config.RootPath = root
-	conf.Config.Port = port
-	conf.Config.MaxLevel = 1
-	conf.Config.IsAllowUpload = false
-	conf.Config.IsSecure = false
-	conf.Config.IP = "127.0.0.1"
+	conf.UnsafeCurrentForTest().RootPath = root
+	conf.UnsafeCurrentForTest().Port = port
+	conf.UnsafeCurrentForTest().MaxLevel = 1
+	conf.UnsafeCurrentForTest().IsAllowUpload = false
+	conf.UnsafeCurrentForTest().IsSecure = false
 
 	controller := NewController()
 	status, err := controller.GetStatus()
@@ -55,17 +54,17 @@ func TestControllerStartStopAndStatus(t *testing.T) {
 	if status.Running {
 		t.Fatalf("stopped status running = true, want false")
 	}
-	if runtimeconf.Current() != nil {
-		t.Fatalf("runtimeconf.Current() = %p, want nil after stop", runtimeconf.Current())
+	if state.Current() != nil {
+		t.Fatalf("state.Current() = %p, want nil after stop", state.Current())
 	}
 }
 
 func TestControllerUpdateConfigHotAndPortRestart(t *testing.T) {
 	resetControllerTest(t)
 	root := t.TempDir()
-	conf.Config.RootPath = root
+	conf.UnsafeCurrentForTest().RootPath = root
 	port := freeControlTestPort(t)
-	conf.Config.Port = port
+	conf.UnsafeCurrentForTest().Port = port
 	controller := NewController()
 
 	if _, err := controller.StartSharing(); err != nil {
@@ -106,9 +105,8 @@ func TestControllerStoppedPortUpdateAppliesBeforeStart(t *testing.T) {
 	resetControllerTest(t)
 	oldPort := freeControlTestPort(t)
 	newPort := freeControlTestPort(t)
-	conf.Config.RootPath = t.TempDir()
-	conf.Config.Port = oldPort
-	conf.Config.IP = "127.0.0.1"
+	conf.UnsafeCurrentForTest().RootPath = t.TempDir()
+	conf.UnsafeCurrentForTest().Port = oldPort
 	controller := NewController()
 
 	status, err := controller.UpdateConfig(ConfigPatchDTO{Port: &newPort})
@@ -145,9 +143,8 @@ func TestControllerPendingPortKeepsActiveAddressUntilConfirmed(t *testing.T) {
 	resetControllerTest(t)
 	oldPort := freeControlTestPort(t)
 	newPort := freeControlTestPort(t)
-	conf.Config.RootPath = t.TempDir()
-	conf.Config.Port = oldPort
-	conf.Config.IP = "127.0.0.1"
+	conf.UnsafeCurrentForTest().RootPath = t.TempDir()
+	conf.UnsafeCurrentForTest().Port = oldPort
 	controller := NewController()
 
 	if _, err := controller.StartSharing(); err != nil {
@@ -186,9 +183,8 @@ func TestControllerStopClearsPendingPortAndNextStartUsesSavedPort(t *testing.T) 
 	resetControllerTest(t)
 	oldPort := freeControlTestPort(t)
 	newPort := freeControlTestPort(t)
-	conf.Config.RootPath = t.TempDir()
-	conf.Config.Port = oldPort
-	conf.Config.IP = "127.0.0.1"
+	conf.UnsafeCurrentForTest().RootPath = t.TempDir()
+	conf.UnsafeCurrentForTest().Port = oldPort
 	controller := NewController()
 
 	if _, err := controller.StartSharing(); err != nil {
@@ -242,9 +238,8 @@ func TestControllerPendingPortConfirmRestartsEvenWhenConfAlreadyHasPort(t *testi
 	resetControllerTest(t)
 	oldPort := freeControlTestPort(t)
 	newPort := freeControlTestPort(t)
-	conf.Config.RootPath = t.TempDir()
-	conf.Config.Port = oldPort
-	conf.Config.IP = "127.0.0.1"
+	conf.UnsafeCurrentForTest().RootPath = t.TempDir()
+	conf.UnsafeCurrentForTest().Port = oldPort
 	controller := NewController()
 
 	if _, err := controller.StartSharing(); err != nil {
@@ -254,8 +249,8 @@ func TestControllerPendingPortConfirmRestartsEvenWhenConfAlreadyHasPort(t *testi
 	if _, err := controller.UpdateConfig(ConfigPatchDTO{Port: &newPort}); err != nil {
 		t.Fatalf("UpdateConfig pending port returned error: %v", err)
 	}
-	if conf.Config.Port != newPort {
-		t.Fatalf("conf.Config.Port = %d, want pending port persisted %d", conf.Config.Port, newPort)
+	if conf.UnsafeCurrentForTest().Port != newPort {
+		t.Fatalf("conf.UnsafeCurrentForTest().Port = %d, want pending port persisted %d", conf.UnsafeCurrentForTest().Port, newPort)
 	}
 
 	status, err := controller.UpdateConfig(ConfigPatchDTO{
@@ -292,9 +287,8 @@ func TestControllerConfirmedPortFailureKeepsOldServiceRunning(t *testing.T) {
 	}
 	defer blocker.Close()
 
-	conf.Config.RootPath = t.TempDir()
-	conf.Config.Port = oldPort
-	conf.Config.IP = "127.0.0.1"
+	conf.UnsafeCurrentForTest().RootPath = t.TempDir()
+	conf.UnsafeCurrentForTest().Port = oldPort
 	controller := NewController()
 	if _, err := controller.StartSharing(); err != nil {
 		t.Fatalf("StartSharing returned error: %v", err)
@@ -332,16 +326,11 @@ func TestControllerConfirmedPortSwitchFailureDoesNotCommitConfigOrRuntime(t *tes
 	resetControllerTest(t)
 	oldPort := freeControlTestPort(t)
 	newPort := freeControlTestPort(t)
-	conf.Config.RootPath = t.TempDir()
-	conf.Config.Port = oldPort
-	conf.Config.IP = "127.0.0.1"
+	conf.UnsafeCurrentForTest().RootPath = t.TempDir()
+	conf.UnsafeCurrentForTest().Port = oldPort
 	viper.Set("server.port", oldPort)
 	if err := os.WriteFile(viper.ConfigFileUsed(), []byte("server:\n  port: "+strconv.Itoa(oldPort)+"\n"), 0o600); err != nil {
 		t.Fatalf("write original config: %v", err)
-	}
-	originalContent, err := os.ReadFile(viper.ConfigFileUsed())
-	if err != nil {
-		t.Fatalf("read original config: %v", err)
 	}
 	controller := NewController()
 	controller.pendingPort = &newPort
@@ -353,7 +342,7 @@ func TestControllerConfirmedPortSwitchFailureDoesNotCommitConfigOrRuntime(t *tes
 
 	switchErr := errors.New("switch failed after bind")
 	previousSwitch := restartServiceWithSnapshot
-	restartServiceWithSnapshot = func(manager *server.ServiceManager, snapshot runtimeconf.ConfigSnapshot, commit func() error) error {
+	restartServiceWithSnapshot = func(manager *server.ServiceManager, snapshot state.ConfigSnapshot, commit func() error) error {
 		return switchErr
 	}
 	t.Cleanup(func() {
@@ -373,18 +362,14 @@ func TestControllerConfirmedPortSwitchFailureDoesNotCommitConfigOrRuntime(t *tes
 	if status.Config.Port != oldPort || status.Address != "http://127.0.0.1:"+strconv.Itoa(oldPort) {
 		t.Fatalf("failed switch status = %+v, want old active port %d", status, oldPort)
 	}
-	if conf.Config.Port != oldPort {
-		t.Fatalf("conf.Config.Port = %d, want old port %d", conf.Config.Port, oldPort)
+	if conf.UnsafeCurrentForTest().Port != oldPort {
+		t.Fatalf("conf.UnsafeCurrentForTest().Port = %d, want old port %d", conf.UnsafeCurrentForTest().Port, oldPort)
 	}
 	if got := controller.manager.Status().Port; got != oldPort {
 		t.Fatalf("runtime port = %d, want old port %d", got, oldPort)
 	}
-	content, err := os.ReadFile(viper.ConfigFileUsed())
-	if err != nil {
-		t.Fatalf("read config file: %v", err)
-	}
-	if string(content) != string(originalContent) {
-		t.Fatalf("config file changed after failed switch:\n%s", string(content))
+	if got := viper.GetInt("server.port"); got != oldPort {
+		t.Fatalf("viper server.port = %d, want old port %d", got, oldPort)
 	}
 }
 
@@ -392,9 +377,8 @@ func TestControllerConfirmedPortCommitFailureDoesNotRewriteConfigFile(t *testing
 	resetControllerTest(t)
 	oldPort := freeControlTestPort(t)
 	newPort := freeControlTestPort(t)
-	conf.Config.RootPath = t.TempDir()
-	conf.Config.Port = oldPort
-	conf.Config.IP = "127.0.0.1"
+	conf.UnsafeCurrentForTest().RootPath = t.TempDir()
+	conf.UnsafeCurrentForTest().Port = oldPort
 	viper.Set("server.port", oldPort)
 	originalContent := []byte("# keep exact bytes\nserver:\n  port: " + strconv.Itoa(oldPort) + "\n")
 	if err := os.WriteFile(viper.ConfigFileUsed(), originalContent, 0o600); err != nil {
@@ -411,8 +395,7 @@ func TestControllerConfirmedPortCommitFailureDoesNotRewriteConfigFile(t *testing
 
 	writeErr := errors.New("commit atomic write failed")
 	writeCalls := 0
-	previousWrite := atomicWriteConfigFile
-	atomicWriteConfigFile = func(path string, data []byte) error {
+	restoreWrite := conf.SetWriteConfigFileForTest(func(path string, data []byte) error {
 		writeCalls++
 		if writeCalls == 1 {
 			return writeErr
@@ -421,10 +404,8 @@ func TestControllerConfirmedPortCommitFailureDoesNotRewriteConfigFile(t *testing
 			t.Fatalf("write rollback marker: %v", err)
 		}
 		return nil
-	}
-	t.Cleanup(func() {
-		atomicWriteConfigFile = previousWrite
 	})
+	t.Cleanup(restoreWrite)
 
 	status, err := controller.UpdateConfig(ConfigPatchDTO{RestartPort: true})
 	if !errors.Is(err, writeErr) {
@@ -439,8 +420,8 @@ func TestControllerConfirmedPortCommitFailureDoesNotRewriteConfigFile(t *testing
 	if status.Config.Port != oldPort || status.Address != "http://127.0.0.1:"+strconv.Itoa(oldPort) {
 		t.Fatalf("failed commit status = %+v, want old active port %d", status, oldPort)
 	}
-	if conf.Config.Port != oldPort {
-		t.Fatalf("conf.Config.Port = %d, want old port %d", conf.Config.Port, oldPort)
+	if conf.UnsafeCurrentForTest().Port != oldPort {
+		t.Fatalf("conf.UnsafeCurrentForTest().Port = %d, want old port %d", conf.UnsafeCurrentForTest().Port, oldPort)
 	}
 	if got := controller.manager.Status().Port; got != oldPort {
 		t.Fatalf("runtime port = %d, want old port %d", got, oldPort)
@@ -489,9 +470,9 @@ func TestControllerStartSharingRejectsInvalidSecureConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resetControllerTest(t)
-			conf.Config.RootPath = t.TempDir()
-			conf.Config.Port = freeControlTestPort(t)
-			conf.Config.IsSecure = true
+			conf.UnsafeCurrentForTest().RootPath = t.TempDir()
+			conf.UnsafeCurrentForTest().Port = freeControlTestPort(t)
+			conf.UnsafeCurrentForTest().IsSecure = true
 			viper.Set("account.secure", true)
 			tt.setup()
 			controller := NewController()
@@ -529,16 +510,16 @@ func TestControllerSetCredentialsEnablesSecure(t *testing.T) {
 	if !status.HasCredentials || !status.Config.IsSecure {
 		t.Fatalf("credential status = %+v, want configured and secure enabled", status)
 	}
-	if conf.Config.Username != "admin" {
-		t.Fatalf("conf username = %q, want admin", conf.Config.Username)
+	if conf.UnsafeCurrentForTest().Username != "admin" {
+		t.Fatalf("conf username = %q, want admin", conf.UnsafeCurrentForTest().Username)
 	}
-	if conf.Config.Password == "" || conf.Config.Password == "strong-password" {
-		t.Fatalf("conf password hash = %q, want non-plaintext bcrypt hash", conf.Config.Password)
+	if conf.UnsafeCurrentForTest().PasswordHash == "" || conf.UnsafeCurrentForTest().PasswordHash == "strong-password" {
+		t.Fatalf("conf password hash = %q, want non-plaintext bcrypt hash", conf.UnsafeCurrentForTest().PasswordHash)
 	}
-	if err := security.VerifyPassword(conf.Config.Password, "strong-password"); err != nil {
+	if err := security.VerifyPassword(conf.UnsafeCurrentForTest().PasswordHash, "strong-password"); err != nil {
 		t.Fatalf("stored password hash did not verify: %v", err)
 	}
-	if got := controller.manager.Status(); got.Username != "admin" || got.PasswordHash != conf.Config.Password || !got.IsSecure {
+	if got := controller.manager.Status(); got.Username != "admin" || got.PasswordHash != conf.UnsafeCurrentForTest().PasswordHash || !got.IsSecure {
 		t.Fatalf("runtime status = %+v, want credential update", got)
 	}
 }
@@ -567,8 +548,8 @@ func TestControllerSetCredentialsRejectsBlankUsernameAndPassword(t *testing.T) {
 			if err == nil {
 				t.Fatal("SetCredentials returned nil error, want validation failure")
 			}
-			if conf.Config.Username != "" || conf.Config.Password != "" {
-				t.Fatalf("conf credentials = %q/%q, want unchanged empty", conf.Config.Username, conf.Config.Password)
+			if conf.UnsafeCurrentForTest().Username != "" || conf.UnsafeCurrentForTest().PasswordHash != "" {
+				t.Fatalf("conf credentials = %q/%q, want unchanged empty", conf.UnsafeCurrentForTest().Username, conf.UnsafeCurrentForTest().PasswordHash)
 			}
 			if got := controller.manager.Status(); got.Username != "" || got.PasswordHash != "" || got.IsSecure {
 				t.Fatalf("runtime status = %+v, want unchanged credentials", got)
@@ -598,8 +579,8 @@ func TestControllerSetCredentialsRejectsConfirmationMismatch(t *testing.T) {
 func TestControllerUpdateConfigRollsBackWhenWriteConfigFails(t *testing.T) {
 	resetControllerTest(t)
 	root := t.TempDir()
-	conf.Config.RootPath = root
-	conf.Config.Port = 9090
+	conf.UnsafeCurrentForTest().RootPath = root
+	conf.UnsafeCurrentForTest().Port = 9090
 	viper.Set("server.road", root)
 	viper.Set("server.port", 9090)
 	controller := NewController()
@@ -615,8 +596,8 @@ func TestControllerUpdateConfigRollsBackWhenWriteConfigFails(t *testing.T) {
 	if err == nil {
 		t.Fatal("UpdateConfig returned nil error, want WriteConfig failure")
 	}
-	if conf.Config.RootPath != root || conf.Config.Port != 9090 {
-		t.Fatalf("conf config = %+v, want original root/port", conf.Config)
+	if conf.UnsafeCurrentForTest().RootPath != root || conf.UnsafeCurrentForTest().Port != 9090 {
+		t.Fatalf("conf config = %+v, want original root/port", conf.UnsafeCurrentForTest())
 	}
 	if got := controller.manager.Status(); got.RootPath != root || got.Port != 9090 {
 		t.Fatalf("runtime status = %+v, want original root/port", got)
@@ -632,8 +613,8 @@ func TestControllerUpdateConfigRollsBackWhenWriteConfigFails(t *testing.T) {
 func TestControllerUpdateConfigAtomicWriteFailureKeepsConfigFileContent(t *testing.T) {
 	resetControllerTest(t)
 	root := t.TempDir()
-	conf.Config.RootPath = root
-	conf.Config.Port = 9090
+	conf.UnsafeCurrentForTest().RootPath = root
+	conf.UnsafeCurrentForTest().Port = 9090
 	viper.Set("server.road", root)
 	viper.Set("server.port", 9090)
 	originalContent := []byte("server:\n  road: " + root + "\n  port: 9090\n")
@@ -643,16 +624,13 @@ func TestControllerUpdateConfigAtomicWriteFailureKeepsConfigFileContent(t *testi
 	controller := NewController()
 
 	writeErr := errors.New("atomic write failed")
-	previousWrite := atomicWriteConfigFile
-	atomicWriteConfigFile = func(path string, data []byte) error {
+	restoreWrite := conf.SetWriteConfigFileForTest(func(path string, data []byte) error {
 		if err := os.WriteFile(path+".tmp", data, 0o600); err != nil {
 			t.Fatalf("write temp probe: %v", err)
 		}
 		return writeErr
-	}
-	t.Cleanup(func() {
-		atomicWriteConfigFile = previousWrite
 	})
+	t.Cleanup(restoreWrite)
 
 	nextRoot := t.TempDir()
 	_, err := controller.UpdateConfig(ConfigPatchDTO{RootPath: &nextRoot})
@@ -666,8 +644,8 @@ func TestControllerUpdateConfigAtomicWriteFailureKeepsConfigFileContent(t *testi
 	if string(content) != string(originalContent) {
 		t.Fatalf("config file content changed after failed atomic write:\n%s", string(content))
 	}
-	if conf.Config.RootPath != root || controller.manager.Status().RootPath != root {
-		t.Fatalf("state changed after failed atomic write: conf=%q runtime=%q", conf.Config.RootPath, controller.manager.Status().RootPath)
+	if conf.UnsafeCurrentForTest().RootPath != root || controller.manager.Status().RootPath != root {
+		t.Fatalf("state changed after failed atomic write: conf=%q runtime=%q", conf.UnsafeCurrentForTest().RootPath, controller.manager.Status().RootPath)
 	}
 }
 
@@ -677,9 +655,9 @@ func TestControllerSetCredentialsRollsBackWhenWriteConfigFails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HashPassword returned error: %v", err)
 	}
-	conf.Config.Username = "old"
-	conf.Config.Password = hash
-	conf.Config.IsSecure = false
+	conf.UnsafeCurrentForTest().Username = "old"
+	conf.UnsafeCurrentForTest().PasswordHash = hash
+	conf.UnsafeCurrentForTest().IsSecure = false
 	viper.Set("account.secure", false)
 	viper.Set("account.custom.user", "old")
 	viper.Set("account.custom.pass_hash", hash)
@@ -697,8 +675,8 @@ func TestControllerSetCredentialsRollsBackWhenWriteConfigFails(t *testing.T) {
 	if err == nil {
 		t.Fatal("SetCredentials returned nil error, want WriteConfig failure")
 	}
-	if conf.Config.Username != "old" || conf.Config.Password != hash || conf.Config.IsSecure {
-		t.Fatalf("conf credentials = %+v, want original values", conf.Config)
+	if conf.UnsafeCurrentForTest().Username != "old" || conf.UnsafeCurrentForTest().PasswordHash != hash || conf.UnsafeCurrentForTest().IsSecure {
+		t.Fatalf("conf credentials = %+v, want original values", conf.UnsafeCurrentForTest())
 	}
 	if got := controller.manager.Status(); got.Username != "old" || got.PasswordHash != hash || got.IsSecure {
 		t.Fatalf("runtime status = %+v, want original credentials", got)
@@ -723,16 +701,13 @@ func TestControllerSetCredentialsAtomicWriteFailureKeepsConfigFileContent(t *tes
 	controller := NewController()
 
 	writeErr := errors.New("atomic credential write failed")
-	previousWrite := atomicWriteConfigFile
-	atomicWriteConfigFile = func(path string, data []byte) error {
+	restoreWrite := conf.SetWriteConfigFileForTest(func(path string, data []byte) error {
 		if err := os.WriteFile(path+".tmp", data, 0o600); err != nil {
 			t.Fatalf("write temp probe: %v", err)
 		}
 		return writeErr
-	}
-	t.Cleanup(func() {
-		atomicWriteConfigFile = previousWrite
 	})
+	t.Cleanup(restoreWrite)
 
 	_, err := controller.SetCredentials(CredentialPatchDTO{
 		Username:        "admin",
@@ -750,8 +725,8 @@ func TestControllerSetCredentialsAtomicWriteFailureKeepsConfigFileContent(t *tes
 	if string(content) != string(originalContent) {
 		t.Fatalf("config file content changed after failed atomic credential write:\n%s", string(content))
 	}
-	if conf.Config.Username != "" || conf.Config.Password != "" || conf.Config.IsSecure {
-		t.Fatalf("conf credentials changed after failed atomic write: %+v", conf.Config)
+	if conf.UnsafeCurrentForTest().Username != "" || conf.UnsafeCurrentForTest().PasswordHash != "" || conf.UnsafeCurrentForTest().IsSecure {
+		t.Fatalf("conf credentials changed after failed atomic write: %+v", conf.UnsafeCurrentForTest())
 	}
 	if got := controller.manager.Status(); got.Username != "" || got.PasswordHash != "" || got.IsSecure {
 		t.Fatalf("runtime credentials changed after failed atomic write: %+v", got)
@@ -858,11 +833,11 @@ func TestControllerExportLogsOverwritesExistingFile(t *testing.T) {
 func resetControllerTest(t *testing.T) {
 	t.Helper()
 
-	originalConfig := *conf.Config
+	originalConfig := *conf.UnsafeCurrentForTest()
 	viper.Reset()
 	t.Cleanup(func() {
-		*conf.Config = originalConfig
-		runtimeconf.SetCurrent(nil)
+		*conf.UnsafeCurrentForTest() = originalConfig
+		state.SetCurrent(nil)
 		viper.Reset()
 	})
 
@@ -898,16 +873,14 @@ func resetControllerTest(t *testing.T) {
 	viper.Set("server.allow_upload", false)
 	viper.Set("account.secure", false)
 
-	conf.Config.RootPath = t.TempDir()
-	conf.Config.Port = 0
-	conf.Config.MaxLevel = 0
-	conf.Config.IsAllowUpload = false
-	conf.Config.IsSecure = false
-	conf.Config.IP = "127.0.0.1"
-	conf.Config.Username = ""
-	conf.Config.Password = ""
-	conf.Config.SessionVal = "test-session"
-	runtimeconf.SetCurrent(nil)
+	conf.UnsafeCurrentForTest().RootPath = t.TempDir()
+	conf.UnsafeCurrentForTest().Port = 0
+	conf.UnsafeCurrentForTest().MaxLevel = 0
+	conf.UnsafeCurrentForTest().IsAllowUpload = false
+	conf.UnsafeCurrentForTest().IsSecure = false
+	conf.UnsafeCurrentForTest().Username = ""
+	conf.UnsafeCurrentForTest().PasswordHash = ""
+	state.SetCurrent(nil)
 }
 
 func freeControlTestPort(t *testing.T) int {

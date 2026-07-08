@@ -2,16 +2,19 @@ package middleware
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
-
-	"github.com/tcp404/OneTiny/internal/conf"
 )
 
 func Logger() gin.HandlerFunc {
+	output := currentSnapshot().Output
+	if output == nil {
+		output = os.Stderr
+	}
 	return gin.LoggerWithConfig(gin.LoggerConfig{
-		Output: conf.Config.Output,
+		Output: output,
 		Formatter: func(param gin.LogFormatterParams) string {
 			var statusColor, methodColor, resetColor string
 			if param.IsOutputColor() {
