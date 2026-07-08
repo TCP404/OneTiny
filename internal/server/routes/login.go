@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/TCP404/OneTiny-cli/internal/handle/secure"
+	"github.com/tcp404/OneTiny/internal/handle/secure"
 
 	"github.com/gin-gonic/gin"
 )

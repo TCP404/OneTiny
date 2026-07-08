@@ -4,17 +4,17 @@ import (
 	"errors"
 	"os"
 
-	"github.com/TCP404/OneTiny-cli/pkg/container"
 	"github.com/fatih/color"
+	"github.com/tcp404/OneTiny/internal/kit/chain"
 )
 
 type pathVerifier struct {
 	rootPath string
 }
 
-var _ container.Handler = (*pathVerifier)(nil)
+var _ chain.Handler = (*pathVerifier)(nil)
 
-func NewPathVerifier(path string) container.Handler { return &pathVerifier{rootPath: path} }
+func NewPathVerifier(path string) chain.Handler { return &pathVerifier{rootPath: path} }
 
 // pathHandler.Handle 负责校验用户指定的共享目录的绝对路径
 func (p *pathVerifier) Handle() error {

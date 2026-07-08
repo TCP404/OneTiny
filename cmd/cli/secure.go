@@ -1,14 +1,14 @@
-package cmd
+package main
 
 import (
-	// "github.com/TCP404/OneTiny-cli/common/verify"
+	// "github.com/tcp404/OneTiny/common/verify"
 
 	"errors"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/security"
 	"github.com/fatih/color"
 	"github.com/spf13/viper"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/urfave/cli/v2"
 )
 

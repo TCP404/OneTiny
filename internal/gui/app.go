@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"sync/atomic"
 
-	"github.com/TCP404/OneTiny-cli/internal/control"
+	"github.com/tcp404/OneTiny/internal/control"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )

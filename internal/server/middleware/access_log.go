@@ -3,8 +3,8 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/TCP404/OneTiny-cli/internal/accesslog"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/accesslog"
 )
 
 func AccessLog() gin.HandlerFunc {

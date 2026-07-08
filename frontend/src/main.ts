@@ -1,6 +1,7 @@
 import "./styles.css";
 import type {
   AppMode,
+  ConfigDTO,
   ConfigPatchDTO,
   LogEntryDTO,
   LogFilterDTO,
@@ -9,14 +10,8 @@ import type {
   TabKey,
 } from "./types";
 
-type RuntimeModule = {
-  Call?: {
-    ByName?: (name: string, ...args: unknown[]) => Promise<unknown>;
-  };
-};
-
-type RuntimeCall = NonNullable<NonNullable<RuntimeModule["Call"]>["ByName"]>;
-type RuntimeLoader = () => Promise<RuntimeModule>;
+type GeneratedServiceModule = typeof import("../bindings/github.com/tcp404/OneTiny/internal/gui/service.js");
+type GeneratedServiceLoader = () => Promise<GeneratedServiceModule>;
 type CredentialDialogState = {
   targetSecure: boolean;
   username: string;
@@ -25,8 +20,6 @@ type CredentialDialogState = {
   error: string;
 };
 
-const serviceFQN = "github.com/TCP404/OneTiny-cli/internal/gui.Service";
-const runtimePath = "/wails/runtime.js";
 const appVersion = "0.1.0";
 const appRoot = document.querySelector<HTMLDivElement>("#app");
 
@@ -78,43 +71,43 @@ const service = createService();
 void refresh();
 
 function createService(): OneTinyService {
-  const call = async <T>(method: string, ...args: unknown[]): Promise<T> => {
-    const byName = await loadRuntimeCall(() => importRuntime(runtimePath));
-    if (!byName) {
+  const loadService = () => import("../bindings/github.com/tcp404/OneTiny/internal/gui/service.js");
+  const call = async <T>(
+    method: keyof OneTinyService & string,
+    args: unknown[],
+    invoke: (generated: GeneratedServiceModule) => PromiseLike<T> | T,
+  ): Promise<T> => {
+    const generated = await loadGeneratedService(loadService);
+    if (!generated) {
       usingMock = true;
       return mockCall<T>(method, args);
     }
 
     usingMock = false;
-    return (await byName(`${serviceFQN}.${method}`, ...args)) as T;
+    return await invoke(generated);
   };
 
   return {
-    GetStatus: () => call("GetStatus"),
-    StartSharing: () => call("StartSharing"),
-    StopSharing: () => call("StopSharing"),
-    UpdateConfig: (patch) => call("UpdateConfig", patch),
-    SetCredentials: (patch) => call("SetCredentials", patch),
-    GetLogs: (filter) => call("GetLogs", filter),
-    ClearLogs: () => call("ClearLogs"),
-    ChooseDirectory: (current) => call("ChooseDirectory", current),
-    ExportLogs: (filter) => call("ExportLogs", filter),
-    OpenConfigDir: () => call("OpenConfigDir"),
+    GetStatus: () => call("GetStatus", [], (generated) => generated.GetStatus()),
+    StartSharing: () => call("StartSharing", [], (generated) => generated.StartSharing()),
+    StopSharing: () => call("StopSharing", [], (generated) => generated.StopSharing()),
+    UpdateConfig: (patch) => call("UpdateConfig", [patch], (generated) => generated.UpdateConfig(patch)),
+    SetCredentials: (patch) => call("SetCredentials", [patch], (generated) => generated.SetCredentials(patch)),
+    GetLogs: (filter) => call("GetLogs", [filter], (generated) => generated.GetLogs(filter)),
+    ClearLogs: () => call("ClearLogs", [], (generated) => generated.ClearLogs()),
+    ChooseDirectory: (current) => call("ChooseDirectory", [current], (generated) => generated.ChooseDirectory(current)),
+    ExportLogs: (filter) => call("ExportLogs", [filter], (generated) => generated.ExportLogs(filter)),
+    OpenConfigDir: () => call("OpenConfigDir", [], (generated) => generated.OpenConfigDir()),
   };
 }
 
-async function importRuntime(path: string): Promise<RuntimeModule> {
-  return (await import(/* @vite-ignore */ path)) as RuntimeModule;
-}
-
-async function loadRuntimeCall(loader: RuntimeLoader): Promise<RuntimeCall | null> {
+async function loadGeneratedService(loader: GeneratedServiceLoader): Promise<GeneratedServiceModule | null> {
   if (import.meta.env.VITE_ONETINY_MOCK === "1") {
     return null;
   }
 
   try {
-    const runtime = await loader();
-    return runtime.Call?.ByName ?? null;
+    return await loader();
   } catch {
     return null;
   }
@@ -155,8 +148,7 @@ async function mockCall<T>(method: string, args: unknown[]): Promise<T> {
         throw new Error(status.lastError);
       }
 
-      const { restartPort: _restartPort, ...configPatch } = patch;
-      const nextConfig = { ...status.config, ...configPatch };
+      const nextConfig = applyConfigPatch(status.config, patch);
       status = {
         ...status,
         config: nextConfig,
@@ -208,6 +200,26 @@ async function mockCall<T>(method: string, args: unknown[]): Promise<T> {
     default:
       throw new Error(`unknown mock method: ${method}`);
   }
+}
+
+function applyConfigPatch(config: ConfigDTO, patch: ConfigPatchDTO): ConfigDTO {
+  const next = { ...config };
+  if (patch.rootPath != null) {
+    next.rootPath = patch.rootPath;
+  }
+  if (patch.port != null) {
+    next.port = patch.port;
+  }
+  if (patch.maxLevel != null) {
+    next.maxLevel = patch.maxLevel;
+  }
+  if (patch.isAllowUpload != null) {
+    next.isAllowUpload = patch.isAllowUpload;
+  }
+  if (patch.isSecure != null) {
+    next.isSecure = patch.isSecure;
+  }
+  return next;
 }
 
 async function refresh(): Promise<void> {

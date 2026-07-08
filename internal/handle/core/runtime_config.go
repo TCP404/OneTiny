@@ -1,9 +1,9 @@
 package core
 
 import (
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 )
 
 func currentSnapshot(c *gin.Context) runtimeconf.ConfigSnapshot {

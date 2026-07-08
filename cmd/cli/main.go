@@ -4,11 +4,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/TCP404/OneTiny-cli/cmd"
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/kit/verify"
-	"github.com/TCP404/OneTiny-cli/internal/server"
-	"github.com/TCP404/OneTiny-cli/pkg/container"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/kit/chain"
+	"github.com/tcp404/OneTiny/internal/kit/verify"
+	"github.com/tcp404/OneTiny/internal/server"
 
 	"github.com/fatih/color"
 )
@@ -25,7 +24,7 @@ func main() {
 		return
 	}
 
-	if err = cmd.CLI().Run(os.Args); err != nil {
+	if err = CLI().Run(os.Args); err != nil {
 		return
 	}
 
@@ -33,7 +32,7 @@ func main() {
 		return
 	}
 
-	if err = container.NewHandleChain().
+	if err = chain.NewHandleChain().
 		AddToHead(verify.NewPortVerifier(conf.Config.Port)).
 		AddToHead(verify.NewPathVerifier(conf.Config.RootPath)).
 		Iterator(); err != nil {

@@ -12,12 +12,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TCP404/OneTiny-cli/internal/accesslog"
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
-	"github.com/TCP404/OneTiny-cli/internal/security"
-	"github.com/TCP404/OneTiny-cli/internal/server"
 	"github.com/spf13/viper"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/security"
+	"github.com/tcp404/OneTiny/internal/server"
 )
 
 func TestControllerStartStopAndStatus(t *testing.T) {

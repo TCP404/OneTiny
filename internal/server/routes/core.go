@@ -1,9 +1,9 @@
 package routes
 
 import (
-	"github.com/TCP404/OneTiny-cli/internal/constant"
-	"github.com/TCP404/OneTiny-cli/internal/handle/core"
-	"github.com/TCP404/OneTiny-cli/internal/server/middleware"
+	"github.com/tcp404/OneTiny/internal/constant"
+	"github.com/tcp404/OneTiny/internal/handle/core"
+	"github.com/tcp404/OneTiny/internal/server/middleware"
 
 	"github.com/gin-gonic/gin"
 )

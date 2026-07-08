@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/TCP404/OneTiny-cli/internal/control"
+	"github.com/tcp404/OneTiny/internal/control"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 

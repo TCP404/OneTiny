@@ -4,9 +4,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/control"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/control"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 )
 
 type fakeDialogAdapter struct {

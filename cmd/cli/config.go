@@ -1,14 +1,14 @@
-package cmd
+package main
 
 import (
 	"os"
 	"path/filepath"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/kit/verify"
-	"github.com/TCP404/OneTiny-cli/pkg/container"
 	"github.com/fatih/color"
 	"github.com/spf13/viper"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/kit/chain"
+	"github.com/tcp404/OneTiny/internal/kit/verify"
 	"github.com/urfave/cli/v2"
 )
 
@@ -26,9 +26,9 @@ func configCmd() *cli.Command {
 }
 
 func beforeConfigAction(c *cli.Context) error {
-	chain := container.NewHandleChain()
+	verificationChain := chain.NewHandleChain()
 	if c.IsSet("port") {
-		chain.AddToHead(verify.NewPortVerifier(c.Int("port")))
+		verificationChain.AddToHead(verify.NewPortVerifier(c.Int("port")))
 	}
 	if c.IsSet("road") {
 		p := c.Path("road")
@@ -36,9 +36,9 @@ func beforeConfigAction(c *cli.Context) error {
 			curr, _ := os.Getwd()
 			p = filepath.Join(curr, p)
 		}
-		chain.AddToHead(verify.NewPathVerifier(p))
+		verificationChain.AddToHead(verify.NewPathVerifier(p))
 	}
-	return chain.Iterator()
+	return verificationChain.Iterator()
 }
 
 func configAction(c *cli.Context) error {

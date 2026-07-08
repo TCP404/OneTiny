@@ -1,6 +1,6 @@
 package gui
 
-import "github.com/TCP404/OneTiny-cli/internal/control"
+import "github.com/tcp404/OneTiny/internal/control"
 
 type Service struct {
 	controller *control.Controller

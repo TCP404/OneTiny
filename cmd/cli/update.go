@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"encoding/json"
@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/constant"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/constant"
 
-	"github.com/TCP404/eutil"
 	"github.com/fatih/color"
 	"github.com/parnurzeal/gorequest"
+	"github.com/tcp404/eutil"
 
 	"github.com/urfave/cli/v2"
 )

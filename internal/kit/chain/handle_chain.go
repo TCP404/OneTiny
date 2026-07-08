@@ -1,4 +1,4 @@
-package container
+package chain
 
 type Handler interface {
 	Handle() error

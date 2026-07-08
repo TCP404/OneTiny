@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 )
 
 func TestServiceManagerStartStopRunningStatus(t *testing.T) {

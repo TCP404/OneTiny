@@ -7,12 +7,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
-	"github.com/TCP404/OneTiny-cli/internal/server/middleware"
-	"github.com/TCP404/OneTiny-cli/internal/server/routes"
 	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/server/middleware"
+	"github.com/tcp404/OneTiny/internal/server/routes"
 )
 
 type coreManager interface {

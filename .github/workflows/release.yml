@@ -91,9 +91,9 @@ jobs:
           mkdir -p "dist/${{ matrix.artifact }}"
           go build \
             -trimpath \
-            -ldflags "-s -w -X github.com/TCP404/OneTiny-cli/internal/constant.VERSION=${VERSION}" \
+            -ldflags "-s -w -X github.com/tcp404/OneTiny/internal/constant.VERSION=${VERSION}" \
             -o "dist/${{ matrix.artifact }}/${{ matrix.binary }}" \
-            .
+            ./cmd/cli
           cd "dist/${{ matrix.artifact }}"
           zip -9 "../${{ matrix.artifact }}.zip" "${{ matrix.binary }}"
 
@@ -197,16 +197,16 @@ jobs:
             -icon build/windows/icon.ico `
             -manifest internal/gui/assets/windows/wails.exe.manifest `
             -info internal/gui/assets/windows/info.json `
-            -out cmd/onetiny-gui/rsrc_windows_amd64.syso
-          if (!(Test-Path cmd/onetiny-gui/rsrc_windows_amd64.syso)) {
+            -out cmd/gui/rsrc_windows_amd64.syso
+          if (!(Test-Path cmd/gui/rsrc_windows_amd64.syso)) {
             throw "Windows resource syso was not generated"
           }
 
           go build `
             -trimpath `
-            -ldflags "-s -w -H windowsgui -X github.com/TCP404/OneTiny-cli/internal/constant.VERSION=$env:VERSION" `
+            -ldflags "-s -w -H windowsgui -X github.com/tcp404/OneTiny/internal/constant.VERSION=$env:VERSION" `
             -o dist/onetiny-gui-windows-x64/OneTiny.exe `
-            ./cmd/onetiny-gui
+            ./cmd/gui
 
       - name: Archive Windows GUI
         run: Compress-Archive -Path dist/onetiny-gui-windows-x64/OneTiny.exe -DestinationPath dist/onetiny-gui-windows-x64.zip

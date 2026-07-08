@@ -3,8 +3,8 @@ package routes
 import (
 	"net/http"
 
-	"github.com/TCP404/OneTiny-cli/resource"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/resource"
 )
 
 func load404Route(app *gin.Engine) {

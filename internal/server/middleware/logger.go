@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/TCP404/OneTiny-cli/internal/conf"
+	"github.com/tcp404/OneTiny/internal/conf"
 )
 
 func Logger() gin.HandlerFunc {

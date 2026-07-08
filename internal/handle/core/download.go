@@ -14,14 +14,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/TCP404/OneTiny-cli/internal/accesslog"
-	"github.com/TCP404/OneTiny-cli/internal/conf"
-	"github.com/TCP404/OneTiny-cli/internal/constant"
-	"github.com/TCP404/OneTiny-cli/internal/handle"
-	"github.com/TCP404/OneTiny-cli/internal/runtimeconf"
-	"github.com/TCP404/OneTiny-cli/pkg"
-	"github.com/TCP404/eutil"
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/constant"
+	"github.com/tcp404/OneTiny/internal/handle"
+	"github.com/tcp404/OneTiny/internal/progress"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/eutil"
 )
 
 type fileStructure struct {
@@ -106,7 +106,7 @@ func (a *agent) file(c *gin.Context) {
 	}
 
 	buf := make([]byte, constant.BufferLimit)
-	bar := pkg.GetBar(a.rel, contentLen, conf.Config.Output)
+	bar := progress.GetBar(a.rel, contentLen, conf.Config.Output)
 
 	// 小于 buf 时直接读取到 buf 中然后返回
 	if contentLen < int64(len(buf)) {
@@ -259,7 +259,7 @@ func buildBreadcrumbs(rel string) []pathCrumb {
 
 func (a *agent) flush(c *gin.Context, src io.Reader, buf []byte) error {
 	data := bufio.NewReader(src)
-	bar := pkg.GetBar(a.rel, getContentLen(a.abs), conf.Config.Output)
+	bar := progress.GetBar(a.rel, getContentLen(a.abs), conf.Config.Output)
 
 	for {
 		n, err := data.Read(buf)
