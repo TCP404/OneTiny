@@ -3,60 +3,60 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "/wails/runtime.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as app$0 from "../app/models.js";
 
 export function ChooseDirectory(current: string): $CancellablePromise<string> {
-    return $Call.ByID(2271257277, current);
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ChooseDirectory", current);
 }
 
 export function ClearLogs(): $CancellablePromise<void> {
-    return $Call.ByID(717304023);
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ClearLogs");
 }
 
 export function ExportLogs(filter: app$0.LogFilterDTO): $CancellablePromise<string> {
-    return $Call.ByID(2943527410, filter);
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ExportLogs", filter);
 }
 
 export function GetLogs(filter: app$0.LogFilterDTO): $CancellablePromise<app$0.LogEntryDTO[]> {
-    return $Call.ByID(4012054750, filter).then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.GetLogs", filter).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
 export function GetStatus(): $CancellablePromise<app$0.StatusDTO> {
-    return $Call.ByID(3149098951).then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.GetStatus").then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 export function OpenConfigDir(): $CancellablePromise<void> {
-    return $Call.ByID(644463484);
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.OpenConfigDir");
 }
 
 export function SetCredentials(patch: app$0.CredentialPatchDTO): $CancellablePromise<app$0.StatusDTO> {
-    return $Call.ByID(306194325, patch).then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.SetCredentials", patch).then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 export function StartSharing(): $CancellablePromise<app$0.StatusDTO> {
-    return $Call.ByID(3556961239).then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.StartSharing").then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 export function StopSharing(): $CancellablePromise<app$0.StatusDTO> {
-    return $Call.ByID(2713997397).then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.StopSharing").then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 export function UpdateConfig(patch: app$0.ConfigPatchDTO): $CancellablePromise<app$0.StatusDTO> {
-    return $Call.ByID(2775678876, patch).then(($result: any) => {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.UpdateConfig", patch).then(($result: any) => {
         return $$createType2($result);
     });
 }

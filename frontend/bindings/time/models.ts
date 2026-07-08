@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Create as $Create } from "@wailsio/runtime";
+import { Create as $Create } from "/wails/runtime.js";
 
 /**
  * A Time represents an instant in time with nanosecond precision.
