@@ -7,6 +7,7 @@
 - 配置读写只能通过 `internal/config.Store`；运行态只能从配置和当前进程派生。
 - CLI-only 代码放 `cmd/cli/`，GUI-only bootstrap 放 `cmd/gui/`，Wails adapter 放 `internal/gui/`。
 - `frontend/bindings/` 是生成物，不手改临时 binding。
+- 创建 PR 时使用 `.github/PULL_REQUEST_TEMPLATE.md`，并保留 Summary、Architecture / Config Impact、Test Plan 和 Checklist。
 - 默认使用 squash merge，除非维护者明确要求其他方式。
 
 ## 发版

@@ -159,14 +159,20 @@ rtk npm run build --prefix frontend
 
 ## PR 规范
 
+PR 说明使用 `.github/PULL_REQUEST_TEMPLATE.md`。不要删掉模板里的核心小节，确实不适用时在对应位置说明原因。
+
 PR 应包含：
 
 - Summary：说明用户可见变化或架构边界变化。
+- Architecture / Config Impact：说明是否影响目录职责、依赖方向、配置可信源或运行态。
 - Test Plan：列出实际执行过的命令。
 - 如果移动目录或改 import path，说明旧路径为什么不能保留。
 - 如果改配置字段，说明持久化/运行态分类。
+- 如果修改生成物，说明来源命令。
 
 默认合并方式是 squash merge。
+
+PR checklist 中关于 `internal/config.Store`、运行态字段、旧目录和 release-please 的条目是架构守门项。勾选前应看实际 diff，不要把 checklist 当成形式化文本。
 
 ## 发版规范
 
