@@ -14,6 +14,7 @@ import (
 const scratchTemplate = "scratch.tpl"
 
 const multipartOverheadBytes = 1 << 20
+const textPreviewBytes = 4096
 
 type handler struct {
 	store *scratch.Store
@@ -83,6 +84,10 @@ func (h handler) get(c *gin.Context) {
 }
 
 func (h handler) readCreatePayload(c *gin.Context) (scratch.Kind, string, []byte, int, error) {
+	if strings.Contains(c.GetHeader("Content-Type"), "application/json") {
+		return h.readJSONPayload(c)
+	}
+
 	switch c.PostForm("kind") {
 	case string(scratch.KindText):
 		return h.readTextPayload(c)
@@ -95,15 +100,26 @@ func (h handler) readCreatePayload(c *gin.Context) (scratch.Kind, string, []byte
 
 func (h handler) readTextPayload(c *gin.Context) (scratch.Kind, string, []byte, int, error) {
 	text := c.PostForm("text")
-	if text == "" && strings.Contains(c.GetHeader("Content-Type"), "application/json") {
-		var payload struct {
-			Text string `json:"text"`
-		}
-		if err := c.ShouldBindJSON(&payload); err == nil {
-			text = payload.Text
-		}
-	}
 	return scratch.KindText, scratch.TextMIME, []byte(text), http.StatusBadRequest, nil
+}
+
+func (h handler) readJSONPayload(c *gin.Context) (scratch.Kind, string, []byte, int, error) {
+	var payload struct {
+		Kind string `json:"kind"`
+		Text string `json:"text"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		if isMaxBytesError(err) {
+			return "", "", nil, http.StatusRequestEntityTooLarge, scratch.ErrItemTooLarge
+		}
+		return "", "", nil, http.StatusBadRequest, err
+	}
+	switch scratch.Kind(payload.Kind) {
+	case scratch.KindText:
+		return scratch.KindText, scratch.TextMIME, []byte(payload.Text), http.StatusBadRequest, nil
+	default:
+		return "", "", nil, http.StatusBadRequest, scratch.ErrUnsupportedType
+	}
 }
 
 func (h handler) prepareCreateRequest(c *gin.Context) (int, error) {
@@ -202,11 +218,11 @@ func (h handler) handleCreateError(c *gin.Context, status int, message string) {
 
 func (h handler) renderIndex(c *gin.Context, status int, message string) {
 	data := gin.H{
-		"items":  []scratch.Item{},
+		"items":  []scratch.Summary{},
 		"limits": scratch.Limits{},
 	}
 	if h.store != nil {
-		data["items"] = h.store.List()
+		data["items"] = h.store.ListSummaries(textPreviewBytes)
 		data["limits"] = h.store.Limits()
 	} else if message == "" {
 		message = "临时列表不可用"

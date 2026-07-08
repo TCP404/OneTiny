@@ -3,6 +3,7 @@ package scratchhandler
 import (
 	"bytes"
 	"encoding/json"
+	"html/template"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/tcp404/OneTiny/internal/scratch"
+	"github.com/tcp404/OneTiny/resource"
 )
 
 func TestCreateTextItemFromFormReturnsJSON(t *testing.T) {
@@ -49,6 +51,29 @@ func TestCreateTextItemFromFormReturnsJSON(t *testing.T) {
 	}
 	if string(items[0].Data) != "hello" {
 		t.Fatalf("item data = %q, want %q", string(items[0].Data), "hello")
+	}
+}
+
+func TestCreateTextItemFromJSONReturnsJSON(t *testing.T) {
+	store := newTestStore(t, scratch.Limits{MaxItems: 10, MaxItemBytes: 1024})
+	router := newTestRouter(store)
+
+	req := httptest.NewRequest(http.MethodPost, "/scratch/items", strings.NewReader(`{"kind":"text","text":"hello-json"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	items := store.List()
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d, want 1", len(items))
+	}
+	if string(items[0].Data) != "hello-json" {
+		t.Fatalf("item data = %q, want hello-json", string(items[0].Data))
 	}
 }
 
@@ -271,6 +296,31 @@ func TestIndexWithNilStoreDoesNotPanic(t *testing.T) {
 	}
 }
 
+func TestIndexRendersTextPreviewWithoutFullContent(t *testing.T) {
+	store := newTestStore(t, scratch.Limits{MaxItems: 10, MaxItemBytes: textPreviewBytes + 128})
+	data := []byte(strings.Repeat("a", textPreviewBytes) + "SECRET_FULL_TEXT")
+	if _, err := store.Add(scratch.KindText, scratch.TextMIME, data); err != nil {
+		t.Fatalf("store.Add returned error: %v", err)
+	}
+	router := newTemplateRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodGet, "/scratch/", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if strings.Contains(body, "SECRET_FULL_TEXT") {
+		t.Fatalf("index rendered full text beyond preview")
+	}
+	if !strings.Contains(body, `data-copy-url="/scratch/items/`) {
+		t.Fatalf("index should render copy URL for full text fetch\nbody:\n%s", body)
+	}
+}
+
 func newTestStore(t *testing.T, limits scratch.Limits) *scratch.Store {
 	t.Helper()
 	store, err := scratch.NewStore(limits)
@@ -285,6 +335,17 @@ func newTestRouter(store *scratch.Store) *gin.Engine {
 	router := gin.New()
 	group := router.Group("/scratch")
 	Register(group, store)
+	return router
+}
+
+func newTemplateRouter(t *testing.T, store *scratch.Store) *gin.Engine {
+	t.Helper()
+	router := newTestRouter(store)
+	tpl, err := template.ParseFS(resource.FS, "template/*.tpl")
+	if err != nil {
+		t.Fatalf("ParseFS returned error: %v", err)
+	}
+	router.SetHTMLTemplate(tpl)
 	return router
 }
 

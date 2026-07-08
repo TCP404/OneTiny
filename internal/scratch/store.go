@@ -39,6 +39,17 @@ type Item struct {
 	UpdatedAt time.Time
 }
 
+type Summary struct {
+	ID        string
+	Kind      Kind
+	MimeType  string
+	Size      int
+	Preview   []byte
+	Truncated bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type Store struct {
 	mu     sync.RWMutex
 	now    func() time.Time
@@ -132,6 +143,21 @@ func (s *Store) List() []Item {
 	return out
 }
 
+func (s *Store) ListSummaries(textPreviewBytes int) []Summary {
+	if textPreviewBytes < 0 {
+		textPreviewBytes = 0
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	out := make([]Summary, len(s.items))
+	for i, item := range s.items {
+		out[i] = summarizeItem(item, textPreviewBytes)
+	}
+	return out
+}
+
 func (s *Store) Get(id string) (Item, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -218,4 +244,28 @@ func cloneItem(item *Item) Item {
 	out := *item
 	out.Data = append([]byte(nil), item.Data...)
 	return out
+}
+
+func summarizeItem(item *Item, textPreviewBytes int) Summary {
+	if item == nil {
+		return Summary{}
+	}
+	size := len(item.Data)
+	previewBytes := 0
+	if item.Kind == KindText && textPreviewBytes > 0 {
+		previewBytes = textPreviewBytes
+		if previewBytes > size {
+			previewBytes = size
+		}
+	}
+	return Summary{
+		ID:        item.ID,
+		Kind:      item.Kind,
+		MimeType:  item.MimeType,
+		Size:      size,
+		Preview:   append([]byte(nil), item.Data[:previewBytes]...),
+		Truncated: previewBytes < size,
+		CreatedAt: item.CreatedAt,
+		UpdatedAt: item.UpdatedAt,
+	}
 }

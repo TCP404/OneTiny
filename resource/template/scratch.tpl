@@ -403,7 +403,7 @@
                             {{end}}
                             <span class="item-id">{{$item.ID}}</span>
                         </div>
-                        <div class="item-meta">{{len $item.Data}} B</div>
+                        <div class="item-meta">{{$item.Size}} B</div>
                     </div>
 
                     {{if eq $item.Kind "image"}}
@@ -412,9 +412,9 @@
                         <a class="button" href="/scratch/items/{{$item.ID}}?download=1">下载图片</a>
                     </div>
                     {{else}}
-                    <textarea class="text-preview" readonly data-copy-source>{{printf "%s" $item.Data}}</textarea>
+                    <textarea class="text-preview" readonly data-copy-source>{{printf "%s" $item.Preview}}</textarea>
                     <div class="item-actions" style="margin-top: 10px;">
-                        <button class="button" type="button" data-copy-button>复制文本</button>
+                        <button class="button" type="button" data-copy-button data-copy-url="/scratch/items/{{$item.ID}}">复制文本</button>
                         <a class="button" href="/scratch/items/{{$item.ID}}?download=1">下载文本</a>
                     </div>
                     {{end}}
@@ -513,19 +513,28 @@
                 if (!button) {
                     return;
                 }
+                var copyUrl = button.getAttribute("data-copy-url");
                 var card = button.closest(".item-card");
                 var source = card ? card.querySelector("[data-copy-source]") : null;
-                if (!source) {
-                    return;
-                }
-                source.select();
-                window.navigator.clipboard.writeText(source.value).then(function () {
+                var textPromise = copyUrl
+                    ? window.fetch(copyUrl).then(function (response) {
+                        if (!response.ok) {
+                            throw new Error("复制失败");
+                        }
+                        return response.text();
+                    })
+                    : Promise.resolve(source ? source.value : "");
+                textPromise.then(function (text) {
+                    return window.navigator.clipboard.writeText(text);
+                }).then(function () {
                     button.setAttribute("data-copy-done", "true");
                     button.textContent = "已复制";
                     window.setTimeout(function () {
                         button.removeAttribute("data-copy-done");
                         button.textContent = "复制文本";
                     }, 1400);
+                }).catch(function () {
+                    window.alert("复制失败");
                 });
             });
         })();

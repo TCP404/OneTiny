@@ -114,6 +114,7 @@ func (s *Service) UpdateConfig(patch ConfigPatchDTO) (StatusDTO, error) {
 		persistPatch.Port = &targetPort
 	}
 	if confirmPort && portChanged {
+		previousConfig := s.configStore.Current()
 		savedSnapshot, err := s.persistConfigPatch(persistPatch, runtime.ProcessFromSnapshot(active))
 		if err != nil {
 			s.pendingPort = nil
@@ -122,7 +123,14 @@ func (s *Service) UpdateConfig(patch ConfigPatchDTO) (StatusDTO, error) {
 			return s.statusLocked(), err
 		}
 		if err := s.manager.RestartWithSnapshot(savedSnapshot, nil); err != nil {
-			s.resetPendingPortFailureLocked(active.Port)
+			if rollbackErr := s.restoreConfigLocked(previousConfig); rollbackErr != nil {
+				s.lastErr = fmt.Sprintf("%s; 回滚配置失败: %s", err.Error(), rollbackErr.Error())
+				s.pendingPort = nil
+				s.portRestartRequired = true
+				return s.statusLocked(), err
+			}
+			s.pendingPort = nil
+			s.portRestartRequired = true
 			s.lastErr = err.Error()
 			return s.statusLocked(), err
 		}
@@ -330,12 +338,17 @@ func (s *Service) configDTOLocked(snapshot runtime.Snapshot) ConfigDTO {
 	return dto
 }
 
-func (s *Service) resetPendingPortFailureLocked(activePort int) {
-	if _, err := s.configStore.Patch(config.ConfigPatch{Port: &activePort}); err != nil {
-		s.lastErr = err.Error()
-	}
-	s.pendingPort = nil
-	s.portRestartRequired = true
+func (s *Service) restoreConfigLocked(cfg config.Config) error {
+	_, err := s.configStore.Patch(config.ConfigPatch{
+		RootPath:           &cfg.RootPath,
+		Port:               &cfg.Port,
+		MaxLevel:           &cfg.MaxLevel,
+		IsAllowUpload:      &cfg.IsAllowUpload,
+		IsSecure:           &cfg.IsSecure,
+		ScratchMaxItems:    &cfg.ScratchMaxItems,
+		ScratchMaxItemSize: &cfg.ScratchMaxItemSize,
+	})
+	return err
 }
 
 func (s *Service) persistConfigPatch(patch ConfigPatchDTO, process runtime.Process) (runtime.Snapshot, error) {

@@ -153,3 +153,61 @@ func TestUpdateConfigRestartPortSyncsScratchLimits(t *testing.T) {
 		t.Fatalf("status config = %+v", status.Config)
 	}
 }
+
+func TestUpdateConfigRestartPortFailureRollsBackScratchPatch(t *testing.T) {
+	svc, store, rt := newTestService(t)
+	startPort := freeTCPPort(t)
+	if _, err := svc.UpdateConfig(ConfigPatchDTO{Port: &startPort}); err != nil {
+		t.Fatalf("UpdateConfig start port: %v", err)
+	}
+	if _, err := svc.StartSharing(); err != nil {
+		t.Fatalf("StartSharing: %v", err)
+	}
+	defer func() {
+		if _, err := svc.StopSharing(); err != nil {
+			t.Fatalf("StopSharing: %v", err)
+		}
+	}()
+
+	blocker, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatalf("Listen blocker: %v", err)
+	}
+	defer blocker.Close()
+	occupiedPort := blocker.Addr().(*net.TCPAddr).Port
+	beforeConfig := store.Current()
+	beforeSnapshot := rt.Snapshot()
+	maxItems := beforeConfig.ScratchMaxItems + 1
+	maxSize := "2MB"
+
+	_, err = svc.UpdateConfig(ConfigPatchDTO{
+		Port:               &occupiedPort,
+		RestartPort:        true,
+		ScratchMaxItems:    &maxItems,
+		ScratchMaxItemSize: &maxSize,
+	})
+	if err == nil {
+		t.Fatal("UpdateConfig restart port error is nil, want occupied port error")
+	}
+
+	gotConfig := store.Current()
+	if gotConfig.Port != beforeConfig.Port {
+		t.Fatalf("stored port = %d, want %d", gotConfig.Port, beforeConfig.Port)
+	}
+	if gotConfig.ScratchMaxItems != beforeConfig.ScratchMaxItems {
+		t.Fatalf("stored ScratchMaxItems = %d, want %d", gotConfig.ScratchMaxItems, beforeConfig.ScratchMaxItems)
+	}
+	if gotConfig.ScratchMaxItemSize != beforeConfig.ScratchMaxItemSize {
+		t.Fatalf("stored ScratchMaxItemSize = %q, want %q", gotConfig.ScratchMaxItemSize, beforeConfig.ScratchMaxItemSize)
+	}
+	gotSnapshot := rt.Snapshot()
+	if gotSnapshot.Port != beforeSnapshot.Port {
+		t.Fatalf("runtime port = %d, want %d", gotSnapshot.Port, beforeSnapshot.Port)
+	}
+	if gotSnapshot.ScratchMaxItems != beforeSnapshot.ScratchMaxItems {
+		t.Fatalf("runtime ScratchMaxItems = %d, want %d", gotSnapshot.ScratchMaxItems, beforeSnapshot.ScratchMaxItems)
+	}
+	if gotSnapshot.ScratchMaxItemSize != beforeSnapshot.ScratchMaxItemSize {
+		t.Fatalf("runtime ScratchMaxItemSize = %q, want %q", gotSnapshot.ScratchMaxItemSize, beforeSnapshot.ScratchMaxItemSize)
+	}
+}

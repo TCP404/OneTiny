@@ -21,6 +21,7 @@ func CheckLogin(c *gin.Context) {
 		return
 	} else {
 		c.Redirect(http.StatusTemporaryRedirect, "/login")
+		c.Abort()
 		return
 	}
 }

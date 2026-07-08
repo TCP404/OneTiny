@@ -180,6 +180,45 @@ func TestStoreGetReturnsCopy(t *testing.T) {
 	}
 }
 
+func TestStoreListSummariesReturnsLimitedTextPreview(t *testing.T) {
+	store, err := NewStore(Limits{MaxItems: 3, MaxItemBytes: 1024})
+	if err != nil {
+		t.Fatalf("NewStore returned error: %v", err)
+	}
+	data := []byte("abcdef")
+	added, err := store.Add(KindText, TextMIME, data)
+	if err != nil {
+		t.Fatalf("Add returned error: %v", err)
+	}
+
+	summaries := store.ListSummaries(4)
+	if len(summaries) != 1 {
+		t.Fatalf("len(summaries) = %d, want 1", len(summaries))
+	}
+	summary := summaries[0]
+	if summary.ID != added.ID {
+		t.Fatalf("summary ID = %q, want %q", summary.ID, added.ID)
+	}
+	if summary.Size != len(data) {
+		t.Fatalf("summary size = %d, want %d", summary.Size, len(data))
+	}
+	if string(summary.Preview) != "abcd" {
+		t.Fatalf("summary preview = %q, want abcd", string(summary.Preview))
+	}
+	if !summary.Truncated {
+		t.Fatal("summary should report truncated preview")
+	}
+
+	summary.Preview[0] = 'A'
+	got, ok := store.Get(added.ID)
+	if !ok {
+		t.Fatal("Get returned not found for existing item")
+	}
+	if string(got.Data) != string(data) {
+		t.Fatalf("stored data mutated via summary preview: %q", string(got.Data))
+	}
+}
+
 func TestStoreConcurrentAddAndList(t *testing.T) {
 	store, err := NewStore(Limits{MaxItems: 200, MaxItemBytes: 1024})
 	if err != nil {
