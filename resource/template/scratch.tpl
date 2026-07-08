@@ -436,10 +436,10 @@
                     body: formData
                 }).then(function (response) {
                     if (!response.ok) {
-                        return response.json().then(function (payload) {
+                        return response.json().catch(function () {
+                            return {};
+                        }).then(function (payload) {
                             throw new Error(payload.error || "添加失败");
-                        }).catch(function () {
-                            throw new Error("添加失败");
                         });
                     }
                     window.location.reload();
@@ -460,14 +460,32 @@
                 return postForm(formData);
             }
 
-            function isTextareaFocused() {
+            function showSubmitError(error) {
+                window.alert((error && error.message) || "添加失败");
+            }
+
+            function isEditableFocused() {
                 var active = document.activeElement;
-                return active && active.tagName === "TEXTAREA";
+                if (!active) {
+                    return false;
+                }
+                if (active.isContentEditable) {
+                    return true;
+                }
+                var editable = active.closest ? active.closest("[contenteditable]") : null;
+                if (editable && editable.getAttribute("contenteditable") !== "false") {
+                    return true;
+                }
+                var tag = active.tagName;
+                return tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT";
             }
 
             document.addEventListener("paste", function (event) {
                 var clipboard = event.clipboardData;
                 if (!clipboard) {
+                    return;
+                }
+                if (isEditableFocused()) {
                     return;
                 }
 
@@ -477,20 +495,16 @@
                         var file = items[i].getAsFile();
                         if (file) {
                             event.preventDefault();
-                            postImage(file);
+                            postImage(file).catch(showSubmitError);
                             return;
                         }
                     }
                 }
 
-                if (isTextareaFocused()) {
-                    return;
-                }
-
                 var text = clipboard.getData("text/plain");
                 if (text) {
                     event.preventDefault();
-                    postText(text);
+                    postText(text).catch(showSubmitError);
                 }
             });
 

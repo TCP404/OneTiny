@@ -79,6 +79,65 @@ func TestCreateImageItemFromMultipartDetectsPNG(t *testing.T) {
 	}
 }
 
+func TestCreateImageItemDetectsSupportedMIMETypes(t *testing.T) {
+	tests := []struct {
+		name     string
+		fileName string
+		data     []byte
+		wantMIME string
+	}{
+		{name: "jpeg", fileName: "image.jpg", data: []byte{0xff, 0xd8, 0xff, 0xdb, 0x00}, wantMIME: "image/jpeg"},
+		{name: "gif", fileName: "image.gif", data: []byte("GIF89a\x01\x00\x01\x00"), wantMIME: "image/gif"},
+		{name: "webp", fileName: "image.webp", data: []byte("RIFF\x00\x00\x00\x00WEBPVP8 "), wantMIME: "image/webp"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := newTestStore(t, scratch.Limits{MaxItems: 10, MaxItemBytes: 1024})
+			router := newTestRouter(store)
+			body, contentType := multipartBody(t, "image", tt.fileName, tt.data)
+
+			req := httptest.NewRequest(http.MethodPost, "/scratch/items", body)
+			req.Header.Set("Content-Type", contentType)
+			req.Header.Set("Accept", "application/json")
+			rec := httptest.NewRecorder()
+
+			router.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+			}
+			items := store.List()
+			if len(items) != 1 {
+				t.Fatalf("len(items) = %d, want 1", len(items))
+			}
+			if items[0].MimeType != tt.wantMIME {
+				t.Fatalf("mime type = %q, want %q", items[0].MimeType, tt.wantMIME)
+			}
+		})
+	}
+}
+
+func TestCreateImageRejectsOversizedPayloadBeforeTypeDetection(t *testing.T) {
+	store := newTestStore(t, scratch.Limits{MaxItems: 10, MaxItemBytes: 8})
+	router := newTestRouter(store)
+	body, contentType := multipartBody(t, "image", "large.bin", []byte("not-an-image"))
+
+	req := httptest.NewRequest(http.MethodPost, "/scratch/items", body)
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Accept", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusRequestEntityTooLarge, rec.Body.String())
+	}
+	if len(store.List()) != 0 {
+		t.Fatalf("store changed after oversized image add: %+v", store.List())
+	}
+}
+
 func TestGetItemReturnsStoredContent(t *testing.T) {
 	store := newTestStore(t, scratch.Limits{MaxItems: 10, MaxItemBytes: 1024})
 	item, err := store.Add(scratch.KindText, scratch.TextMIME, []byte("hello"))
@@ -100,6 +159,28 @@ func TestGetItemReturnsStoredContent(t *testing.T) {
 	}
 	if rec.Body.String() != "hello" {
 		t.Fatalf("body = %q, want hello", rec.Body.String())
+	}
+}
+
+func TestGetItemDownloadSetsContentDisposition(t *testing.T) {
+	store := newTestStore(t, scratch.Limits{MaxItems: 10, MaxItemBytes: 1024})
+	item, err := store.Add(scratch.KindText, scratch.TextMIME, []byte("hello"))
+	if err != nil {
+		t.Fatalf("store.Add returned error: %v", err)
+	}
+	router := newTestRouter(store)
+
+	req := httptest.NewRequest(http.MethodGet, "/scratch/items/"+item.ID+"?download=1", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	want := "attachment; filename=" + item.ID
+	if got := rec.Header().Get("Content-Disposition"); got != want {
+		t.Fatalf("Content-Disposition = %q, want %q", got, want)
 	}
 }
 
