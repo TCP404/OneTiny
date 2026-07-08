@@ -11,42 +11,51 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/runtime"
 )
 
 var (
-	ErrServerAlreadyRunning  = errors.New("server already running")
-	ErrServerNotRunning      = errors.New("server not running")
-	ErrRuntimeConfigRequired = errors.New("runtime config required")
+	ErrServerAlreadyRunning = errors.New("server already running")
+	ErrServerNotRunning     = errors.New("server not running")
+	ErrRuntimeRequired      = errors.New("runtime config required")
 )
 
-type ServiceManager struct {
+type Dependencies struct {
+	Runtime   *runtime.Runtime
+	AccessLog *accesslog.Logger
+}
+
+type Manager struct {
 	mu       sync.Mutex
-	cfg      *runtimeconf.RuntimeConfig
+	cfg      *runtime.Runtime
+	logger   *accesslog.Logger
 	srv      *http.Server
 	listener net.Listener
 	done     chan error
 	stopping bool
 }
 
-var buildHTTPServer = defaultBuildHTTPServer
-
-func NewServiceManager(cfg *runtimeconf.RuntimeConfig) *ServiceManager {
-	return &ServiceManager{cfg: cfg}
+func NewManager(cfg *runtime.Runtime) *Manager {
+	return &Manager{cfg: cfg}
 }
 
-func (m *ServiceManager) Start() error {
+func NewManagerWithDependencies(deps Dependencies) *Manager {
+	return &Manager{cfg: deps.Runtime, logger: deps.AccessLog}
+}
+
+func (m *Manager) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.cfg == nil {
-		return ErrRuntimeConfigRequired
+		return ErrRuntimeRequired
 	}
 	if m.srv != nil || m.stopping {
 		return ErrServerAlreadyRunning
 	}
 
-	srv, listener, err := prepareServer(m.cfg.Snapshot())
+	srv, listener, err := prepareServer(m.cfg.Snapshot(), m.cfg, m.logger)
 	if err != nil {
 		return err
 	}
@@ -55,12 +64,11 @@ func (m *ServiceManager) Start() error {
 	m.listener = listener
 	m.done = done
 
-	runtimeconf.SetCurrent(m.cfg)
 	go m.serve(srv, listener, done)
 	return nil
 }
 
-func (m *ServiceManager) Stop() error {
+func (m *Manager) Stop() error {
 	m.mu.Lock()
 	if m.srv == nil || m.stopping {
 		m.mu.Unlock()
@@ -102,16 +110,16 @@ func (m *ServiceManager) Stop() error {
 	return serveErr
 }
 
-func (m *ServiceManager) Restart() error {
+func (m *Manager) Restart() error {
 	if err := m.Stop(); err != nil && !errors.Is(err, ErrServerNotRunning) {
 		return err
 	}
 	return m.Start()
 }
 
-func (m *ServiceManager) RestartWithSnapshot(snapshot runtimeconf.ConfigSnapshot, commit func() error) error {
+func (m *Manager) RestartWithSnapshot(snapshot runtime.Snapshot, commit func() error) error {
 	if m.cfg == nil {
-		return ErrRuntimeConfigRequired
+		return ErrRuntimeRequired
 	}
 
 	m.mu.Lock()
@@ -121,7 +129,7 @@ func (m *ServiceManager) RestartWithSnapshot(snapshot runtimeconf.ConfigSnapshot
 	}
 	m.mu.Unlock()
 
-	nextSrv, nextListener, err := prepareServer(snapshot)
+	nextSrv, nextListener, err := prepareServer(snapshot, m.cfg, m.logger)
 	if err != nil {
 		return err
 	}
@@ -152,7 +160,6 @@ func (m *ServiceManager) RestartWithSnapshot(snapshot runtimeconf.ConfigSnapshot
 	m.listener = nextListener
 	m.done = nextDone
 	applySnapshot(m.cfg, snapshot)
-	runtimeconf.SetCurrent(m.cfg)
 	m.mu.Unlock()
 
 	closeNext = false
@@ -161,40 +168,40 @@ func (m *ServiceManager) RestartWithSnapshot(snapshot runtimeconf.ConfigSnapshot
 	return nil
 }
 
-func (m *ServiceManager) ApplyRuntimeConfig(patch runtimeconf.ConfigPatch) error {
+func (m *Manager) ApplyRuntime(patch runtime.Patch) error {
 	if m.cfg == nil {
-		return ErrRuntimeConfigRequired
+		return ErrRuntimeRequired
 	}
 	m.cfg.Update(patch)
 	return nil
 }
 
-func (m *ServiceManager) Config() *runtimeconf.RuntimeConfig {
+func (m *Manager) Config() *runtime.Runtime {
 	return m.cfg
 }
 
-func (m *ServiceManager) Done() <-chan error {
+func (m *Manager) Done() <-chan error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	return m.done
 }
 
-func (m *ServiceManager) Running() bool {
+func (m *Manager) Running() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	return m.srv != nil && !m.stopping
 }
 
-func (m *ServiceManager) Status() runtimeconf.ConfigSnapshot {
+func (m *Manager) Status() runtime.Snapshot {
 	if m.cfg == nil {
-		return runtimeconf.ConfigSnapshot{}
+		return runtime.Snapshot{}
 	}
 	return m.cfg.Snapshot()
 }
 
-func (m *ServiceManager) serve(srv *http.Server, listener net.Listener, done chan<- error) {
+func (m *Manager) serve(srv *http.Server, listener net.Listener, done chan<- error) {
 	err := srv.Serve(listener)
 	if errors.Is(err, http.ErrServerClosed) || errors.Is(err, net.ErrClosed) {
 		err = nil
@@ -211,12 +218,12 @@ func (m *ServiceManager) serve(srv *http.Server, listener net.Listener, done cha
 	done <- err
 }
 
-func prepareServer(snapshot runtimeconf.ConfigSnapshot) (*http.Server, net.Listener, error) {
+func prepareServer(snapshot runtime.Snapshot, rt *runtime.Runtime, logger *accesslog.Logger) (*http.Server, net.Listener, error) {
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(snapshot.Port))
 	if err != nil {
 		return nil, nil, fmt.Errorf("start server: %w", err)
 	}
-	srv, err := buildHTTPServer(listener)
+	srv, err := defaultBuildHTTPServer(listener, rt, logger)
 	if err != nil {
 		_ = listener.Close()
 		return nil, nil, err
@@ -224,10 +231,12 @@ func prepareServer(snapshot runtimeconf.ConfigSnapshot) (*http.Server, net.Liste
 	return srv, listener, nil
 }
 
-func defaultBuildHTTPServer(listener net.Listener) (*http.Server, error) {
+func defaultBuildHTTPServer(listener net.Listener, rt *runtime.Runtime, logger *accesslog.Logger) (*http.Server, error) {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	setupEngine(r)
+	if err := setupEngine(r, rt, logger); err != nil {
+		return nil, err
+	}
 	return &http.Server{
 		Addr:    listener.Addr().String(),
 		Handler: r,
@@ -260,8 +269,8 @@ func shutdownPrevious(srv *http.Server, listener net.Listener, done <-chan error
 	return serveErr
 }
 
-func applySnapshot(cfg *runtimeconf.RuntimeConfig, snapshot runtimeconf.ConfigSnapshot) {
-	cfg.Update(runtimeconf.ConfigPatch{
+func applySnapshot(cfg *runtime.Runtime, snapshot runtime.Snapshot) {
+	cfg.Update(runtime.Patch{
 		RootPath:      &snapshot.RootPath,
 		Port:          &snapshot.Port,
 		MaxLevel:      &snapshot.MaxLevel,

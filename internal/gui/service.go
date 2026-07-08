@@ -1,46 +1,46 @@
 package gui
 
-import "github.com/tcp404/OneTiny/internal/control"
+import "github.com/tcp404/OneTiny/internal/app"
 
 type Service struct {
-	controller *control.Controller
-	dialogs    DialogAdapter
+	service *app.Service
+	dialogs DialogAdapter
 }
 
-func NewService(controller *control.Controller, dialogs DialogAdapter) *Service {
-	return &Service{controller: controller, dialogs: dialogs}
+func NewService(service *app.Service, dialogs DialogAdapter) *Service {
+	return &Service{service: service, dialogs: dialogs}
 }
 
 func (s *Service) setDialogAdapter(dialogs DialogAdapter) {
 	s.dialogs = dialogs
 }
 
-func (s *Service) GetStatus() (control.StatusDTO, error) {
-	return s.controller.GetStatus()
+func (s *Service) GetStatus() (app.StatusDTO, error) {
+	return s.service.GetStatus()
 }
 
-func (s *Service) StartSharing() (control.StatusDTO, error) {
-	return s.controller.StartSharing()
+func (s *Service) StartSharing() (app.StatusDTO, error) {
+	return s.service.StartSharing()
 }
 
-func (s *Service) StopSharing() (control.StatusDTO, error) {
-	return s.controller.StopSharing()
+func (s *Service) StopSharing() (app.StatusDTO, error) {
+	return s.service.StopSharing()
 }
 
-func (s *Service) UpdateConfig(patch control.ConfigPatchDTO) (control.StatusDTO, error) {
-	return s.controller.UpdateConfig(patch)
+func (s *Service) UpdateConfig(patch app.ConfigPatchDTO) (app.StatusDTO, error) {
+	return s.service.UpdateConfig(patch)
 }
 
-func (s *Service) SetCredentials(patch control.CredentialPatchDTO) (control.StatusDTO, error) {
-	return s.controller.SetCredentials(patch)
+func (s *Service) SetCredentials(patch app.CredentialPatchDTO) (app.StatusDTO, error) {
+	return s.service.SetCredentials(patch)
 }
 
-func (s *Service) GetLogs(filter control.LogFilterDTO) ([]control.LogEntryDTO, error) {
-	return s.controller.GetLogs(filter)
+func (s *Service) GetLogs(filter app.LogFilterDTO) ([]app.LogEntryDTO, error) {
+	return s.service.GetLogs(filter)
 }
 
 func (s *Service) ClearLogs() error {
-	return s.controller.ClearLogs()
+	return s.service.ClearLogs()
 }
 
 func (s *Service) ChooseDirectory(current string) (string, error) {
@@ -50,7 +50,7 @@ func (s *Service) ChooseDirectory(current string) (string, error) {
 	return s.dialogs.ChooseDirectory(current)
 }
 
-func (s *Service) ExportLogs(filter control.LogFilterDTO) (string, error) {
+func (s *Service) ExportLogs(filter app.LogFilterDTO) (string, error) {
 	if s.dialogs == nil {
 		return "", nil
 	}
@@ -58,7 +58,7 @@ func (s *Service) ExportLogs(filter control.LogFilterDTO) (string, error) {
 	if err != nil || path == "" {
 		return path, err
 	}
-	if err := s.controller.ExportLogs(path, filter); err != nil {
+	if err := s.service.ExportLogs(path, filter); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -72,7 +72,7 @@ func (s *Service) OpenConfigDir() error {
 }
 
 func (s *Service) requestQuit(onConfirmed func()) bool {
-	status, err := s.controller.GetStatus()
+	status, err := s.service.GetStatus()
 	if err != nil {
 		return false
 	}
@@ -95,5 +95,5 @@ func (s *Service) requestQuit(onConfirmed func()) bool {
 }
 
 func (s *Service) shutdown() {
-	_, _ = s.controller.StopSharing()
+	_, _ = s.service.StopSharing()
 }

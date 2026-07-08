@@ -1,22 +1,30 @@
 package middleware
 
 import (
-	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/runtimeconf"
+	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/runtime"
 )
 
-func currentSnapshot() runtimeconf.ConfigSnapshot {
-	cfg := runtimeconf.Current()
-	if cfg != nil {
-		return cfg.Snapshot()
+func RuntimeSnapshot(rt *runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if rt != nil {
+			c.Set(runtime.ContextKey, rt.Snapshot())
+		}
+		c.Next()
 	}
+}
 
-	return runtimeconf.ConfigSnapshot{
-		RootPath:      conf.Config.RootPath,
-		Port:          conf.Config.Port,
-		MaxLevel:      conf.Config.MaxLevel,
-		IsAllowUpload: conf.Config.IsAllowUpload,
-		IsSecure:      conf.Config.IsSecure,
-		IP:            conf.Config.IP,
+func currentSnapshot(c *gin.Context) runtime.Snapshot {
+	if c == nil {
+		return runtime.Snapshot{}
 	}
+	value, ok := c.Get(runtime.ContextKey)
+	if !ok {
+		return runtime.Snapshot{}
+	}
+	snapshot, ok := value.(runtime.Snapshot)
+	if !ok {
+		return runtime.Snapshot{}
+	}
+	return snapshot
 }

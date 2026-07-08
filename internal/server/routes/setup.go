@@ -2,17 +2,16 @@ package routes
 
 import (
 	"html/template"
-	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tcp404/OneTiny/resource"
 )
 
-func Setup(r *gin.Engine) *gin.Engine {
+func Setup(r *gin.Engine) error {
 
 	t, err := template.ParseFS(resource.FS, "template/*.tpl")
 	if err != nil {
-		log.Fatal(err.Error())
+		return err
 	}
 	r.SetHTMLTemplate(t)
 
@@ -22,5 +21,5 @@ func Setup(r *gin.Engine) *gin.Engine {
 	load404Route(r)
 	loadICORoute(r)
 	loadLogoRoute(r)
-	return r
+	return nil
 }

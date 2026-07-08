@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
-	"github.com/tcp404/OneTiny/internal/conf"
-	"github.com/tcp404/OneTiny/internal/constant"
+	"github.com/tcp404/OneTiny/internal/version"
 
 	"github.com/fatih/color"
 	"github.com/parnurzeal/gorequest"
@@ -47,7 +47,7 @@ type update struct {
 }
 
 func updateAction(c *cli.Context) error {
-	var u = &update{currVersion: splitVersion(constant.VERSION)}
+	var u = &update{currVersion: splitVersion(version.Version)}
 	err := u.updateAction(c)
 	if err != nil {
 		return cli.Exit(err.Error(), 31)
@@ -94,12 +94,12 @@ func (u *update) updateList() error {
 	return nil
 }
 
-func (u *update) updateVersion(version string) error {
-	if err := checkVersion(version); err != nil {
+func (u *update) updateVersion(targetVersion string) error {
+	if err := checkVersion(targetVersion); err != nil {
 		return err
 	}
 
-	_, body, errs := gorequest.New().Get(constant.VersionByTagURL + version).End()
+	_, body, errs := gorequest.New().Get(version.VersionByTagURL + targetVersion).End()
 	if len(errs) != 0 {
 		return errors.New("网络抖动了一下～请重试")
 	}
@@ -110,7 +110,7 @@ func (u *update) updateVersion(version string) error {
 	}
 
 	// 检查当前系统是 linux 还是 mac 还是 windows决定 Assets 用哪个,然后进行下载
-	name, ok := constant.ReleaseName[conf.Config.OS]
+	name, ok := version.ReleaseName[runtime.GOOS]
 	if !ok {
 		u.msg = color.YellowString("暂时没有适合您的系统的版本，请自行下载编译")
 		return nil
@@ -134,7 +134,7 @@ func (u *update) updateVersion(version string) error {
 	p, err := os.UserHomeDir()
 	if err != nil {
 		u.msg = color.HiYellowString("获取 Home 目录失败")
-		p = conf.Config.Pwd
+		p, _ = os.Getwd()
 	}
 	path := filepath.Join(p, assert.Name)
 	errs = eutil.DownloadBinary(assert.DownloadURL, path)
@@ -148,7 +148,7 @@ func (u *update) updateVersion(version string) error {
 func (u *update) updateLatest() error {
 	// 获取当前最新版本
 	req := gorequest.New()
-	_, body, errs := req.Get(constant.VersionLatestURL).End()
+	_, body, errs := req.Get(version.VersionLatestURL).End()
 	if len(errs) != 0 {
 		return errors.New("网络抖动了一下～请重试")
 	}
@@ -212,7 +212,7 @@ func checkVersion(version string) error {
 }
 
 func getVersionList() ([]TagList, error) {
-	_, body, errs := gorequest.New().Set("Accept", "application/vnd.github.v3+json").Get(constant.VersionListURL).End()
+	_, body, errs := gorequest.New().Set("Accept", "application/vnd.github.v3+json").Get(version.VersionListURL).End()
 	if len(errs) != 0 {
 		return nil, errors.New("网络抖动了一下～请重试")
 	}
