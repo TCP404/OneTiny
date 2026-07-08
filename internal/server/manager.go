@@ -29,14 +29,15 @@ type Dependencies struct {
 }
 
 type Manager struct {
-	mu       sync.Mutex
-	cfg      *runtime.Runtime
-	logger   *accesslog.Logger
-	scratch  *scratch.Store
-	srv      *http.Server
-	listener net.Listener
-	done     chan error
-	stopping bool
+	mu         sync.Mutex
+	cfg        *runtime.Runtime
+	logger     *accesslog.Logger
+	scratch    *scratch.Store
+	scratchErr error
+	srv        *http.Server
+	listener   net.Listener
+	done       chan error
+	stopping   bool
 }
 
 func NewManager(cfg *runtime.Runtime) *Manager {
@@ -45,10 +46,11 @@ func NewManager(cfg *runtime.Runtime) *Manager {
 
 func NewManagerWithDependencies(deps Dependencies) *Manager {
 	scratchStore := deps.Scratch
+	var scratchErr error
 	if scratchStore == nil && deps.Runtime != nil {
-		scratchStore, _ = newScratchStore(deps.Runtime.Snapshot())
+		scratchStore, scratchErr = newScratchStore(deps.Runtime.Snapshot())
 	}
-	return &Manager{cfg: deps.Runtime, logger: deps.AccessLog, scratch: scratchStore}
+	return &Manager{cfg: deps.Runtime, logger: deps.AccessLog, scratch: scratchStore, scratchErr: scratchErr}
 }
 
 func (m *Manager) Start() error {
@@ -62,7 +64,12 @@ func (m *Manager) Start() error {
 		return ErrServerAlreadyRunning
 	}
 
-	srv, listener, err := prepareServer(m.cfg.Snapshot(), m.cfg, m.logger, m.scratch)
+	snapshot := m.cfg.Snapshot()
+	if err := m.updateScratchLimits(snapshot); err != nil {
+		return err
+	}
+
+	srv, listener, err := prepareServer(snapshot, m.cfg, m.logger, m.scratch)
 	if err != nil {
 		return err
 	}
@@ -136,7 +143,29 @@ func (m *Manager) RestartWithSnapshot(snapshot runtime.Snapshot, commit func() e
 	}
 	m.mu.Unlock()
 
-	nextSrv, nextListener, err := prepareServer(snapshot, m.cfg, m.logger, m.scratch)
+	limits := scratchLimitsFromSnapshot(snapshot)
+	if err := validateScratchLimits(limits); err != nil {
+		return err
+	}
+
+	m.mu.Lock()
+	if m.stopping {
+		m.mu.Unlock()
+		return ErrServerAlreadyRunning
+	}
+	nextScratch := m.scratch
+	if nextScratch == nil {
+		var err error
+		nextScratch, err = scratch.NewStore(limits)
+		if err != nil {
+			m.scratchErr = err
+			m.mu.Unlock()
+			return err
+		}
+	}
+	m.mu.Unlock()
+
+	nextSrv, nextListener, err := prepareServer(snapshot, m.cfg, m.logger, nextScratch)
 	if err != nil {
 		return err
 	}
@@ -160,7 +189,7 @@ func (m *Manager) RestartWithSnapshot(snapshot runtime.Snapshot, commit func() e
 			return err
 		}
 	}
-	if err := m.updateScratchLimits(snapshot); err != nil {
+	if err := m.setScratchLimits(limits, nextScratch); err != nil {
 		m.mu.Unlock()
 		return err
 	}
@@ -186,8 +215,16 @@ func (m *Manager) ApplyRuntime(patch runtime.Patch) error {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	nextSnapshot := snapshotWithPatch(m.cfg.Snapshot(), patch)
+	scratchStore, limits, err := m.prepareScratchStore(nextSnapshot)
+	if err != nil {
+		return err
+	}
+	if err := m.setScratchLimits(limits, scratchStore); err != nil {
+		return err
+	}
 	m.cfg.Update(patch)
-	return m.updateScratchLimits(m.cfg.Snapshot())
+	return nil
 }
 
 func (m *Manager) Config() *runtime.Runtime {
@@ -307,16 +344,52 @@ func applySnapshot(cfg *runtime.Runtime, snapshot runtime.Snapshot) {
 }
 
 func (m *Manager) updateScratchLimits(snapshot runtime.Snapshot) error {
+	scratchStore, limits, err := m.prepareScratchStore(snapshot)
+	if err != nil {
+		return err
+	}
+	return m.setScratchLimits(limits, scratchStore)
+}
+
+func (m *Manager) prepareScratchStore(snapshot runtime.Snapshot) (*scratch.Store, scratch.Limits, error) {
 	limits := scratchLimitsFromSnapshot(snapshot)
+	if m.scratch != nil {
+		if err := validateScratchLimits(limits); err != nil {
+			return nil, scratch.Limits{}, err
+		}
+		return m.scratch, limits, nil
+	}
+	scratchStore, err := scratch.NewStore(limits)
+	if err != nil {
+		return nil, scratch.Limits{}, err
+	}
+	return scratchStore, limits, nil
+}
+
+func (m *Manager) setScratchLimits(limits scratch.Limits, prepared *scratch.Store) error {
 	if m.scratch == nil {
-		scratchStore, err := scratch.NewStore(limits)
-		if err != nil {
+		if prepared == nil {
+			var err error
+			prepared, err = scratch.NewStore(limits)
+			if err != nil {
+				m.scratchErr = err
+				return err
+			}
+		}
+		if err := prepared.UpdateLimits(limits); err != nil {
+			m.scratchErr = err
 			return err
 		}
-		m.scratch = scratchStore
+		m.scratch = prepared
+		m.scratchErr = nil
 		return nil
 	}
-	return m.scratch.UpdateLimits(limits)
+	if err := m.scratch.UpdateLimits(limits); err != nil {
+		m.scratchErr = err
+		return err
+	}
+	m.scratchErr = nil
+	return nil
 }
 
 func newScratchStore(snapshot runtime.Snapshot) (*scratch.Store, error) {
@@ -328,4 +401,46 @@ func scratchLimitsFromSnapshot(snapshot runtime.Snapshot) scratch.Limits {
 		MaxItems:     snapshot.ScratchMaxItems,
 		MaxItemBytes: int(snapshot.ScratchMaxItemBytes),
 	}
+}
+
+func validateScratchLimits(limits scratch.Limits) error {
+	_, err := scratch.NewStore(limits)
+	return err
+}
+
+func snapshotWithPatch(snapshot runtime.Snapshot, patch runtime.Patch) runtime.Snapshot {
+	if patch.RootPath != nil {
+		snapshot.RootPath = *patch.RootPath
+	}
+	if patch.Port != nil {
+		snapshot.Port = *patch.Port
+	}
+	if patch.MaxLevel != nil {
+		snapshot.MaxLevel = *patch.MaxLevel
+	}
+	if patch.IsAllowUpload != nil {
+		snapshot.IsAllowUpload = *patch.IsAllowUpload
+	}
+	if patch.IsSecure != nil {
+		snapshot.IsSecure = *patch.IsSecure
+	}
+	if patch.Username != nil {
+		snapshot.Username = *patch.Username
+	}
+	if patch.PasswordHash != nil {
+		snapshot.PasswordHash = *patch.PasswordHash
+	}
+	if patch.SessionVal != nil {
+		snapshot.SessionVal = *patch.SessionVal
+	}
+	if patch.ScratchMaxItems != nil {
+		snapshot.ScratchMaxItems = *patch.ScratchMaxItems
+	}
+	if patch.ScratchMaxItemSize != nil {
+		snapshot.ScratchMaxItemSize = *patch.ScratchMaxItemSize
+	}
+	if patch.ScratchMaxItemBytes != nil {
+		snapshot.ScratchMaxItemBytes = *patch.ScratchMaxItemBytes
+	}
+	return snapshot
 }
