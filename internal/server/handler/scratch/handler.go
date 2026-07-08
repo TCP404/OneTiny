@@ -40,6 +40,11 @@ func (h handler) create(c *gin.Context) {
 		return
 	}
 
+	if status, err := h.prepareCreateRequest(c); err != nil {
+		h.handleCreateError(c, status, err.Error())
+		return
+	}
+
 	kind, mimeType, data, status, err := h.readCreatePayload(c)
 	if err != nil {
 		h.handleCreateError(c, status, err.Error())
@@ -101,20 +106,41 @@ func (h handler) readTextPayload(c *gin.Context) (scratch.Kind, string, []byte, 
 	return scratch.KindText, scratch.TextMIME, []byte(text), http.StatusBadRequest, nil
 }
 
-func (h handler) readImagePayload(c *gin.Context) (scratch.Kind, string, []byte, int, error) {
+func (h handler) prepareCreateRequest(c *gin.Context) (int, error) {
 	if h.store == nil {
-		return "", "", nil, http.StatusInternalServerError, errors.New("临时列表不可用")
+		return http.StatusInternalServerError, errors.New("临时列表不可用")
 	}
 
 	limit := h.store.Limits().MaxItemBytes
 	if limit > 0 {
-		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, int64(limit)+multipartOverheadBytes)
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, createBodyLimit(limit))
 	}
 
+	contentType := c.GetHeader("Content-Type")
+	switch {
+	case strings.Contains(contentType, "multipart/form-data"):
+		if err := c.Request.ParseMultipartForm(createBodyLimit(limit)); err != nil {
+			if isMaxBytesError(err) {
+				return http.StatusRequestEntityTooLarge, scratch.ErrItemTooLarge
+			}
+			return http.StatusBadRequest, scratch.ErrUnsupportedType
+		}
+	case strings.Contains(contentType, "application/x-www-form-urlencoded"):
+		if err := c.Request.ParseForm(); err != nil {
+			if isMaxBytesError(err) {
+				return http.StatusRequestEntityTooLarge, scratch.ErrItemTooLarge
+			}
+			return http.StatusBadRequest, err
+		}
+	}
+
+	return 0, nil
+}
+
+func (h handler) readImagePayload(c *gin.Context) (scratch.Kind, string, []byte, int, error) {
 	file, err := c.FormFile("image")
 	if err != nil {
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
+		if isMaxBytesError(err) {
 			return "", "", nil, http.StatusRequestEntityTooLarge, scratch.ErrItemTooLarge
 		}
 		return "", "", nil, http.StatusBadRequest, scratch.ErrEmptyContent
@@ -126,6 +152,7 @@ func (h handler) readImagePayload(c *gin.Context) (scratch.Kind, string, []byte,
 	}
 	defer opened.Close()
 
+	limit := h.store.Limits().MaxItemBytes
 	data, err := io.ReadAll(io.LimitReader(opened, int64(limit)+1))
 	if err != nil {
 		return "", "", nil, http.StatusInternalServerError, err
@@ -142,6 +169,15 @@ func (h handler) readImagePayload(c *gin.Context) (scratch.Kind, string, []byte,
 		return "", "", nil, http.StatusBadRequest, scratch.ErrUnsupportedType
 	}
 	return scratch.KindImage, mimeType, data, http.StatusBadRequest, nil
+}
+
+func createBodyLimit(limit int) int64 {
+	return int64(limit) + multipartOverheadBytes
+}
+
+func isMaxBytesError(err error) bool {
+	var maxBytesErr *http.MaxBytesError
+	return errors.As(err, &maxBytesErr)
 }
 
 func normalizeMIMEType(value string) string {

@@ -138,6 +138,28 @@ func TestCreateImageRejectsOversizedPayloadBeforeTypeDetection(t *testing.T) {
 	}
 }
 
+func TestCreateImageRejectsMultipartBodyOverLimitBeforePostFormParsing(t *testing.T) {
+	store := newTestStore(t, scratch.Limits{MaxItems: 10, MaxItemBytes: 64})
+	router := newTestRouter(store)
+	body, contentType := multipartBodyWithFields(t, "image", "image.png", pngBytes(), map[string]string{
+		"padding": strings.Repeat("x", multipartOverheadBytes+65),
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/scratch/items", body)
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Accept", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusRequestEntityTooLarge, rec.Body.String())
+	}
+	if len(store.List()) != 0 {
+		t.Fatalf("store changed after oversized multipart add: %+v", store.List())
+	}
+}
+
 func TestGetItemReturnsStoredContent(t *testing.T) {
 	store := newTestStore(t, scratch.Limits{MaxItems: 10, MaxItemBytes: 1024})
 	item, err := store.Add(scratch.KindText, scratch.TextMIME, []byte("hello"))
@@ -268,10 +290,20 @@ func newTestRouter(store *scratch.Store) *gin.Engine {
 
 func multipartBody(t *testing.T, fieldName, fileName string, data []byte) (*bytes.Buffer, string) {
 	t.Helper()
+	return multipartBodyWithFields(t, fieldName, fileName, data, nil)
+}
+
+func multipartBodyWithFields(t *testing.T, fieldName, fileName string, data []byte, fields map[string]string) (*bytes.Buffer, string) {
+	t.Helper()
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	if err := writer.WriteField("kind", "image"); err != nil {
 		t.Fatalf("write kind field: %v", err)
+	}
+	for name, value := range fields {
+		if err := writer.WriteField(name, value); err != nil {
+			t.Fatalf("write %s field: %v", name, err)
+		}
 	}
 	part, err := writer.CreateFormFile(fieldName, fileName)
 	if err != nil {
