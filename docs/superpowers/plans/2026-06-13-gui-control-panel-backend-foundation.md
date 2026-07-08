@@ -276,7 +276,7 @@ Create `internal/conf/store.go`:
 package conf
 
 import (
-	"github.com/tcp404/OneTiny-cli/internal/security"
+	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/spf13/viper"
 )
 
@@ -354,8 +354,8 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/tcp404/OneTiny-cli/internal/conf"
-	"github.com/tcp404/OneTiny-cli/internal/security"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
 )
@@ -430,8 +430,8 @@ Modify `cmd/secure.go`:
 import (
 	"errors"
 
-	"github.com/tcp404/OneTiny-cli/internal/conf"
-	"github.com/tcp404/OneTiny-cli/internal/security"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/fatih/color"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
@@ -477,8 +477,8 @@ Modify `internal/handle/secure/login.go`:
 import (
 	"net/http"
 
-	"github.com/tcp404/OneTiny-cli/internal/conf"
-	"github.com/tcp404/OneTiny-cli/internal/security"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/security"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -651,7 +651,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tcp404/OneTiny-cli/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 	"github.com/gin-gonic/gin"
 )
 
@@ -761,7 +761,7 @@ func initServer() *http.Server {
 }
 ```
 
-Add `github.com/tcp404/OneTiny-cli/internal/runtimeconf` to the imports.
+Add `github.com/tcp404/OneTiny/internal/runtimeconf` to the imports.
 
 - [ ] **Step 6: Verify runtime and server tests pass**
 
@@ -796,8 +796,8 @@ Modify `internal/server/middleware/check-login.go`:
 import (
 	"net/http"
 
-	"github.com/tcp404/OneTiny-cli/internal/conf"
-	"github.com/tcp404/OneTiny-cli/internal/runtimeconf"
+	"github.com/tcp404/OneTiny/internal/conf"
+	"github.com/tcp404/OneTiny/internal/runtimeconf"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -852,7 +852,7 @@ func isOverLevel(rootPath string, maxLevel uint8, relPath string, isFile bool, i
 }
 ```
 
-Add `github.com/tcp404/OneTiny-cli/internal/runtimeconf` to imports and remove `internal/conf`.
+Add `github.com/tcp404/OneTiny/internal/runtimeconf` to imports and remove `internal/conf`.
 
 - [ ] **Step 3: Update download handler root path**
 
@@ -1096,7 +1096,7 @@ Create `internal/server/middleware/access_log.go`:
 package middleware
 
 import (
-	"github.com/tcp404/OneTiny-cli/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/accesslog"
 	"github.com/gin-gonic/gin"
 )
 
@@ -1155,8 +1155,8 @@ func LoginPost(c *gin.Context) {
 Add imports:
 
 ```go
-	"github.com/tcp404/OneTiny-cli/internal/accesslog"
-	"github.com/tcp404/OneTiny-cli/internal/server/middleware"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/server/middleware"
 ```
 
 - [ ] **Step 6: Record download events**
@@ -1177,8 +1177,8 @@ In `internal/handle/core/download.go`, at the start of `func (a *agent) file(c *
 Add imports:
 
 ```go
-	"github.com/tcp404/OneTiny-cli/internal/accesslog"
-	"github.com/tcp404/OneTiny-cli/internal/server/middleware"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/server/middleware"
 ```
 
 - [ ] **Step 7: Record upload success and rejection events**
@@ -1212,8 +1212,8 @@ After a successful upload response:
 Add imports:
 
 ```go
-	"github.com/tcp404/OneTiny-cli/internal/accesslog"
-	"github.com/tcp404/OneTiny-cli/internal/server/middleware"
+	"github.com/tcp404/OneTiny/internal/accesslog"
+	"github.com/tcp404/OneTiny/internal/server/middleware"
 ```
 
 - [ ] **Step 8: Verify logging tests and compile**
