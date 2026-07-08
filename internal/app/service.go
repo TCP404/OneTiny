@@ -126,6 +126,10 @@ func (s *Service) UpdateConfig(patch ConfigPatchDTO) (StatusDTO, error) {
 			s.lastErr = err.Error()
 			return s.statusLocked(), err
 		}
+		if err := s.manager.ApplyRuntime(runtimePatchFromSnapshot(active, savedSnapshot)); err != nil {
+			s.lastErr = err.Error()
+			return s.statusLocked(), err
+		}
 		s.pendingPort = nil
 		s.portRestartRequired = false
 		s.lastErr = ""
