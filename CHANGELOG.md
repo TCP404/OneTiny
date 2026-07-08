@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/tcp404/OneTiny/compare/v0.8.0...v0.9.0) (2026-07-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* Go module path changed from github.com/TCP404/OneTiny-cli to github.com/tcp404/OneTiny.
+
+### Code Refactoring
+
+* centralize config and internal architecture ([0578371](https://github.com/tcp404/OneTiny/commit/057837151ad1833b332c3542635a999cd0868702))
+* normalize module layout ([612b4a8](https://github.com/tcp404/OneTiny/commit/612b4a8f35eaf48fcbac9b9036bda759eab0f428))
+
 ## [0.8.0](https://github.com/tcp404/OneTiny/compare/v0.7.0...v0.8.0) (2026-07-07)
 
 
