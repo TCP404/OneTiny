@@ -119,3 +119,42 @@ func TestConcurrentSnapshotAndUpdate(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestSnapshotFromConfigIncludesScratchLimits(t *testing.T) {
+	snapshot := SnapshotFromConfig(PersistentConfig{
+		RootPath:            "/tmp/root",
+		Port:                8192,
+		MaxLevel:            1,
+		ScratchMaxItems:     123,
+		ScratchMaxItemSize:  "8MB",
+		ScratchMaxItemBytes: 8 * 1024 * 1024,
+	}, Process{SessionVal: "session"})
+
+	if snapshot.ScratchMaxItems != 123 {
+		t.Fatalf("ScratchMaxItems = %d, want 123", snapshot.ScratchMaxItems)
+	}
+	if snapshot.ScratchMaxItemSize != "8MB" {
+		t.Fatalf("ScratchMaxItemSize = %q, want 8MB", snapshot.ScratchMaxItemSize)
+	}
+	if snapshot.ScratchMaxItemBytes != 8*1024*1024 {
+		t.Fatalf("ScratchMaxItemBytes = %d, want 8MB", snapshot.ScratchMaxItemBytes)
+	}
+}
+
+func TestRuntimeUpdateAppliesScratchLimits(t *testing.T) {
+	rt := New(Snapshot{ScratchMaxItems: 500, ScratchMaxItemSize: "10MB", ScratchMaxItemBytes: 10})
+	maxItems := 20
+	maxSize := "1MB"
+	maxBytes := int64(1024 * 1024)
+
+	rt.Update(Patch{
+		ScratchMaxItems:     &maxItems,
+		ScratchMaxItemSize:  &maxSize,
+		ScratchMaxItemBytes: &maxBytes,
+	})
+
+	snapshot := rt.Snapshot()
+	if snapshot.ScratchMaxItems != 20 || snapshot.ScratchMaxItemSize != "1MB" || snapshot.ScratchMaxItemBytes != maxBytes {
+		t.Fatalf("scratch snapshot = %+v, want updated limits", snapshot)
+	}
+}

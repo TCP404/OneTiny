@@ -13,39 +13,48 @@ import (
 const ContextKey = "runtimeSnapshot"
 
 type Snapshot struct {
-	RootPath      string
-	Port          int
-	MaxLevel      uint8
-	IsAllowUpload bool
-	IsSecure      bool
-	IP            string
-	Username      string
-	PasswordHash  string
-	SessionVal    string
-	Output        io.Writer
-	OS            string
-	Pwd           string
+	RootPath            string
+	Port                int
+	MaxLevel            uint8
+	IsAllowUpload       bool
+	IsSecure            bool
+	IP                  string
+	Username            string
+	PasswordHash        string
+	SessionVal          string
+	ScratchMaxItems     int
+	ScratchMaxItemSize  string
+	ScratchMaxItemBytes int64
+	Output              io.Writer
+	OS                  string
+	Pwd                 string
 }
 
 type PersistentConfig struct {
-	RootPath      string
-	Port          int
-	MaxLevel      uint8
-	IsAllowUpload bool
-	IsSecure      bool
-	Username      string
-	PasswordHash  string
+	RootPath            string
+	Port                int
+	MaxLevel            uint8
+	IsAllowUpload       bool
+	IsSecure            bool
+	Username            string
+	PasswordHash        string
+	ScratchMaxItems     int
+	ScratchMaxItemSize  string
+	ScratchMaxItemBytes int64
 }
 
 type Patch struct {
-	RootPath      *string
-	Port          *int
-	MaxLevel      *uint8
-	IsAllowUpload *bool
-	IsSecure      *bool
-	Username      *string
-	PasswordHash  *string
-	SessionVal    *string
+	RootPath            *string
+	Port                *int
+	MaxLevel            *uint8
+	IsAllowUpload       *bool
+	IsSecure            *bool
+	Username            *string
+	PasswordHash        *string
+	SessionVal          *string
+	ScratchMaxItems     *int
+	ScratchMaxItemSize  *string
+	ScratchMaxItemBytes *int64
 }
 
 type Process struct {
@@ -79,18 +88,21 @@ func NewProcess() Process {
 
 func SnapshotFromConfig(cfg PersistentConfig, process Process) Snapshot {
 	return Snapshot{
-		RootPath:      cfg.RootPath,
-		MaxLevel:      cfg.MaxLevel,
-		Port:          cfg.Port,
-		IsAllowUpload: cfg.IsAllowUpload,
-		IsSecure:      cfg.IsSecure,
-		Username:      cfg.Username,
-		PasswordHash:  cfg.PasswordHash,
-		Output:        process.Output,
-		OS:            process.OS,
-		IP:            process.IP,
-		Pwd:           process.Pwd,
-		SessionVal:    process.SessionVal,
+		RootPath:            cfg.RootPath,
+		MaxLevel:            cfg.MaxLevel,
+		Port:                cfg.Port,
+		IsAllowUpload:       cfg.IsAllowUpload,
+		IsSecure:            cfg.IsSecure,
+		Username:            cfg.Username,
+		PasswordHash:        cfg.PasswordHash,
+		ScratchMaxItems:     cfg.ScratchMaxItems,
+		ScratchMaxItemSize:  cfg.ScratchMaxItemSize,
+		ScratchMaxItemBytes: cfg.ScratchMaxItemBytes,
+		Output:              process.Output,
+		OS:                  process.OS,
+		IP:                  process.IP,
+		Pwd:                 process.Pwd,
+		SessionVal:          process.SessionVal,
 	}
 }
 
@@ -138,5 +150,14 @@ func (r *Runtime) Update(patch Patch) {
 	}
 	if patch.SessionVal != nil {
 		r.snapshot.SessionVal = *patch.SessionVal
+	}
+	if patch.ScratchMaxItems != nil {
+		r.snapshot.ScratchMaxItems = *patch.ScratchMaxItems
+	}
+	if patch.ScratchMaxItemSize != nil {
+		r.snapshot.ScratchMaxItemSize = *patch.ScratchMaxItemSize
+	}
+	if patch.ScratchMaxItemBytes != nil {
+		r.snapshot.ScratchMaxItemBytes = *patch.ScratchMaxItemBytes
 	}
 }
