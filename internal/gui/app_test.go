@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/tcp404/OneTiny/internal/control"
+	"github.com/tcp404/OneTiny/internal/app"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -20,7 +20,7 @@ func TestAppIconIsEmbeddedPNG(t *testing.T) {
 }
 
 func TestApplicationOptionsUseAppIcon(t *testing.T) {
-	service := NewService(control.NewController(), nil)
+	service := NewService(app.NewService(app.Dependencies{}), nil)
 	options := newApplicationOptions(service, fstest.MapFS{}, nil, nil, nil)
 
 	if !bytes.Equal(options.Icon, appIcon) {
@@ -29,7 +29,7 @@ func TestApplicationOptionsUseAppIcon(t *testing.T) {
 }
 
 func TestApplicationOptionsEnableSingleInstance(t *testing.T) {
-	service := NewService(control.NewController(), nil)
+	service := NewService(app.NewService(app.Dependencies{}), nil)
 	var opened bool
 	options := newApplicationOptions(service, fstest.MapFS{}, nil, nil, func() {
 		opened = true

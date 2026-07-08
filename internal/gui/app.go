@@ -5,17 +5,20 @@ import (
 	"io/fs"
 	"sync/atomic"
 
-	"github.com/tcp404/OneTiny/internal/control"
-	"github.com/tcp404/OneTiny/internal/state"
+	appsvc "github.com/tcp404/OneTiny/internal/app"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 const singleInstanceID = "com.tcp404.onetiny.gui"
 
-func Run(assets embed.FS, state *state.RuntimeConfig) error {
-	controller := control.NewControllerWithState(state)
-	service := NewService(controller, nil)
+type Dependencies struct {
+	AppService *appsvc.Service
+	ConfigDir  string
+}
+
+func Run(assets embed.FS, deps Dependencies) error {
+	service := NewService(deps.AppService, nil)
 	var quitting atomic.Bool
 
 	var app *application.App
@@ -40,7 +43,7 @@ func Run(assets embed.FS, state *state.RuntimeConfig) error {
 	app.SetIcon(appIcon)
 
 	window = app.Window.NewWithOptions(newMainWindowOptions())
-	service.setDialogAdapter(NewWailsDialogAdapter(app, window))
+	service.setDialogAdapter(NewWailsDialogAdapter(app, window, deps.ConfigDir))
 
 	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		if quitting.Load() {

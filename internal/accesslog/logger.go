@@ -13,6 +13,8 @@ import (
 )
 
 const (
+	ContextKey = "accessLogger"
+
 	maxLogLineBytes = 1024 * 1024
 
 	EventAccess   = "access"
@@ -48,11 +50,6 @@ type Logger struct {
 	mu   sync.Mutex
 }
 
-var (
-	defaultLogger   = New(DefaultPath())
-	defaultLoggerMu sync.RWMutex
-)
-
 func DefaultPath() string {
 	dir, err := os.UserConfigDir()
 	if err != nil {
@@ -63,27 +60,6 @@ func DefaultPath() string {
 
 func New(path string) *Logger {
 	return &Logger{path: path}
-}
-
-func SetLoggerForTest(logger *Logger) func() {
-	defaultLoggerMu.Lock()
-	previous := defaultLogger
-	defaultLogger = logger
-	defaultLoggerMu.Unlock()
-
-	return func() {
-		defaultLoggerMu.Lock()
-		defaultLogger = previous
-		defaultLoggerMu.Unlock()
-	}
-}
-
-func Log(event Event) {
-	logger := currentLogger()
-	if logger == nil {
-		return
-	}
-	_ = logger.Write(event)
 }
 
 func (l *Logger) Write(event Event) error {
@@ -151,12 +127,6 @@ func (l *Logger) Clear() error {
 		return err
 	}
 	return os.WriteFile(l.path, nil, 0o600)
-}
-
-func currentLogger() *Logger {
-	defaultLoggerMu.RLock()
-	defer defaultLoggerMu.RUnlock()
-	return defaultLogger
 }
 
 func readLogLine(reader *bufio.Reader) ([]byte, error) {

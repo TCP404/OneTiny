@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tcp404/OneTiny/internal/conf"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -19,12 +18,13 @@ type DialogAdapter interface {
 }
 
 type WailsDialogAdapter struct {
-	app    *application.App
-	window application.Window
+	app       *application.App
+	window    application.Window
+	configDir string
 }
 
-func NewWailsDialogAdapter(app *application.App, window application.Window) *WailsDialogAdapter {
-	return &WailsDialogAdapter{app: app, window: window}
+func NewWailsDialogAdapter(app *application.App, window application.Window, configDir string) *WailsDialogAdapter {
+	return &WailsDialogAdapter{app: app, window: window, configDir: configDir}
 }
 
 func (d *WailsDialogAdapter) ChooseDirectory(current string) (string, error) {
@@ -58,11 +58,7 @@ func (d *WailsDialogAdapter) ChooseExportPath() (string, error) {
 }
 
 func (d *WailsDialogAdapter) OpenConfigDir() error {
-	dir, err := conf.ConfigDir()
-	if err != nil {
-		return err
-	}
-	return openPath(filepath.Clean(dir))
+	return openPath(filepath.Clean(d.configDir))
 }
 
 func (d *WailsDialogAdapter) ConfirmQuitWhileRunning(onConfirm func()) error {

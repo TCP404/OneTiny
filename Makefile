@@ -21,7 +21,7 @@ CLI_MAIN := ./cmd/cli
 GOARCH ?= $(shell go env GOARCH)
 HOST_GOOS := $(shell go env GOOS)
 
-GO_LDFLAGS := -s -w -X github.com/tcp404/OneTiny/internal/constant.VERSION=$(VERSION)
+GO_LDFLAGS := -s -w -X github.com/tcp404/OneTiny/internal/version.Version=$(VERSION)
 UPX ?= upx
 UPX_FLAGS ?= --best
 
