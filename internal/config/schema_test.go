@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -232,6 +234,72 @@ scratch:
 	}
 }
 
+func TestStorePatchRejectsInvalidScratchConfigWithoutMutatingTrustedConfig(t *testing.T) {
+	tests := []struct {
+		name  string
+		patch ConfigPatch
+	}{
+		{
+			name: "max items",
+			patch: func() ConfigPatch {
+				maxItems := 0
+				return ConfigPatch{ScratchMaxItems: &maxItems}
+			}(),
+		},
+		{
+			name: "max item size",
+			patch: func() ConfigPatch {
+				maxSize := "nope"
+				return ConfigPatch{ScratchMaxItemSize: &maxSize}
+			}(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := newTestStore(t, `
+server:
+  port: 8192
+scratch:
+  max_items: 500
+  max_item_size: 10MB
+`)
+			loaded, err := store.Load()
+			if err != nil {
+				t.Fatalf("Load returned error: %v", err)
+			}
+			beforeFile, err := os.ReadFile(store.Path())
+			if err != nil {
+				t.Fatalf("ReadFile before patch: %v", err)
+			}
+
+			if _, err := store.Patch(tt.patch); err == nil {
+				t.Fatal("Patch accepted invalid scratch config")
+			}
+
+			if got := store.Current(); !reflect.DeepEqual(got, loaded) {
+				t.Fatalf("Current after failed patch = %+v, want %+v", got, loaded)
+			}
+
+			afterFile, err := os.ReadFile(store.Path())
+			if err != nil {
+				t.Fatalf("ReadFile after patch: %v", err)
+			}
+			if string(afterFile) != string(beforeFile) {
+				t.Fatalf("config file changed after failed patch:\nbefore:\n%s\nafter:\n%s", beforeFile, afterFile)
+			}
+
+			reloaded, err := store.Load()
+			if err != nil {
+				t.Fatalf("Load returned error after failed patch: %v", err)
+			}
+			if !reflect.DeepEqual(reloaded, loaded) {
+				t.Fatalf("Reload after failed patch = %+v, want %+v", reloaded, loaded)
+			}
+		})
+	}
+}
+
 func TestStoreRejectsInvalidScratchConfig(t *testing.T) {
 	store := newTestStore(t, `
 scratch:
@@ -270,6 +338,21 @@ func TestParseByteSize(t *testing.T) {
 		}
 		if got != want {
 			t.Fatalf("ParseByteSize(%q) = %d, want %d", input, got, want)
+		}
+	}
+}
+
+func TestParseByteSizeRejectsInvalidInput(t *testing.T) {
+	tests := []string{
+		"",
+		"nope",
+		fmt.Sprintf("%dKB", math.MaxInt64/1024+1),
+		fmt.Sprintf("%dMB", math.MaxInt64/(1024*1024)+1),
+		fmt.Sprintf("%dGB", math.MaxInt64/(1024*1024*1024)+1),
+	}
+	for _, input := range tests {
+		if _, err := ParseByteSize(input); err == nil {
+			t.Fatalf("ParseByteSize(%q) accepted invalid input", input)
 		}
 	}
 }

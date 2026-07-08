@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"math"
 	"strconv"
 	"strings"
 	"unicode"
@@ -36,12 +37,19 @@ func ParseByteSize(value string) (int64, error) {
 	case "", "B":
 		return number, nil
 	case "KB", "K":
-		return number * 1024, nil
+		return multiplyByteSize(number, 1024)
 	case "MB", "M":
-		return number * 1024 * 1024, nil
+		return multiplyByteSize(number, 1024*1024)
 	case "GB", "G":
-		return number * 1024 * 1024 * 1024, nil
+		return multiplyByteSize(number, 1024*1024*1024)
 	default:
 		return 0, ErrInvalidByteSize
 	}
+}
+
+func multiplyByteSize(number, multiplier int64) (int64, error) {
+	if number > math.MaxInt64/multiplier {
+		return 0, ErrInvalidByteSize
+	}
+	return number * multiplier, nil
 }
