@@ -12,11 +12,13 @@ import (
 )
 
 type Config struct {
-	RootPath      string
-	MaxLevel      uint8
-	Port          int
-	IsAllowUpload bool
-	IsSecure      bool
+	RootPath           string
+	MaxLevel           uint8
+	Port               int
+	IsAllowUpload      bool
+	IsSecure           bool
+	ScratchMaxItems    int
+	ScratchMaxItemSize string
 
 	Username         string
 	PasswordHash     string
@@ -25,11 +27,13 @@ type Config struct {
 }
 
 type ConfigPatch struct {
-	RootPath      *string
-	MaxLevel      *uint8
-	Port          *int
-	IsAllowUpload *bool
-	IsSecure      *bool
+	RootPath           *string
+	MaxLevel           *uint8
+	Port               *int
+	IsAllowUpload      *bool
+	IsSecure           *bool
+	ScratchMaxItems    *int
+	ScratchMaxItemSize *string
 }
 
 type Store struct {
@@ -119,6 +123,15 @@ func (s *Store) Patch(patch ConfigPatch) (Config, error) {
 	if patch.IsSecure != nil {
 		cfg.IsSecure = *patch.IsSecure
 	}
+	if patch.ScratchMaxItems != nil {
+		cfg.ScratchMaxItems = *patch.ScratchMaxItems
+	}
+	if patch.ScratchMaxItemSize != nil {
+		cfg.ScratchMaxItemSize = *patch.ScratchMaxItemSize
+	}
+	if err := validateScratchConfig(cfg); err != nil {
+		return Config{}, err
+	}
 	if err := validateSecureConfigFor(cfg, cfg.IsSecure); err != nil {
 		return Config{}, err
 	}
@@ -149,11 +162,15 @@ func (s *Store) ensureFile() error {
 
 func (s *Store) configFromViper() (Config, error) {
 	cfg := Config{
-		RootPath:         s.v.GetString("server.road"),
-		MaxLevel:         uint8(s.v.GetInt("server.max_level")),
-		Port:             s.v.GetInt("server.port"),
-		IsAllowUpload:    s.v.GetBool("server.allow_upload"),
-		IsSecure:         s.v.GetBool("account.secure"),
+		RootPath:        s.v.GetString("server.road"),
+		MaxLevel:        uint8(s.v.GetInt("server.max_level")),
+		Port:            s.v.GetInt("server.port"),
+		IsAllowUpload:   s.v.GetBool("server.allow_upload"),
+		IsSecure:        s.v.GetBool("account.secure"),
+		ScratchMaxItems: s.v.GetInt("scratch.max_items"),
+		ScratchMaxItemSize: strings.TrimSpace(
+			s.v.GetString("scratch.max_item_size"),
+		),
 		Username:         s.v.GetString("account.custom.user"),
 		PasswordHash:     s.v.GetString("account.custom.pass_hash"),
 		PasswordHashAlgo: s.v.GetString("account.custom.pass_hash_algo"),
@@ -169,6 +186,15 @@ func (s *Store) configFromViper() (Config, error) {
 		}
 		cfg.RootPath = wd
 	}
+	if !s.v.IsSet("scratch.max_items") {
+		cfg.ScratchMaxItems = defaults.ScratchMaxItems
+	}
+	if !s.v.IsSet("scratch.max_item_size") {
+		cfg.ScratchMaxItemSize = defaults.ScratchMaxItemSize
+	}
+	if err := validateScratchConfig(cfg); err != nil {
+		return Config{}, err
+	}
 	return cfg, nil
 }
 
@@ -182,11 +208,13 @@ func (s *Store) writeConfig(cfg Config) error {
 
 func defaultConfig() Config {
 	return Config{
-		RootPath:      defaults.RootPath,
-		MaxLevel:      defaults.MaxLevel,
-		Port:          defaults.Port,
-		IsAllowUpload: defaults.IsAllowUpload,
-		IsSecure:      defaults.IsSecure,
+		RootPath:           defaults.RootPath,
+		MaxLevel:           defaults.MaxLevel,
+		Port:               defaults.Port,
+		IsAllowUpload:      defaults.IsAllowUpload,
+		IsSecure:           defaults.IsSecure,
+		ScratchMaxItems:    defaults.ScratchMaxItems,
+		ScratchMaxItemSize: defaults.ScratchMaxItemSize,
 	}
 }
 
@@ -207,7 +235,22 @@ func configSettings(cfg Config) map[string]any {
 				"pass":           cfg.LegacyPassword,
 			},
 		},
+		"scratch": map[string]any{
+			"max_items":     cfg.ScratchMaxItems,
+			"max_item_size": cfg.ScratchMaxItemSize,
+		},
 	}
+}
+
+func validateScratchConfig(cfg Config) error {
+	if cfg.ScratchMaxItems < 1 {
+		return errors.New("临时列表容量必须大于 0")
+	}
+	sizeBytes, err := ParseByteSize(cfg.ScratchMaxItemSize)
+	if err != nil || sizeBytes < 1 {
+		return ErrInvalidByteSize
+	}
+	return nil
 }
 
 func atomicWriteFile(path string, data []byte) error {

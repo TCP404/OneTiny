@@ -167,3 +167,109 @@ account:
 		})
 	}
 }
+
+func TestStoreLoadCreatesScratchDefaults(t *testing.T) {
+	store := newTestStore(t, "")
+	cfg, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if cfg.ScratchMaxItems != 500 {
+		t.Fatalf("ScratchMaxItems = %d, want 500", cfg.ScratchMaxItems)
+	}
+	if cfg.ScratchMaxItemSize != "10MB" {
+		t.Fatalf("ScratchMaxItemSize = %q, want 10MB", cfg.ScratchMaxItemSize)
+	}
+}
+
+func TestStoreLoadBackfillsScratchDefaultsForOldConfig(t *testing.T) {
+	store := newTestStore(t, `
+server:
+  port: 8192
+  allow_upload: false
+  max_level: 0
+`)
+	cfg, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if cfg.ScratchMaxItems != 500 || cfg.ScratchMaxItemSize != "10MB" {
+		t.Fatalf("scratch defaults = %d %q, want 500 10MB", cfg.ScratchMaxItems, cfg.ScratchMaxItemSize)
+	}
+}
+
+func TestStorePatchPersistsScratchConfig(t *testing.T) {
+	store := newTestStore(t, `
+server:
+  port: 8192
+scratch:
+  max_items: 500
+  max_item_size: 10MB
+`)
+	if _, err := store.Load(); err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+
+	maxItems := 42
+	maxSize := "512KB"
+	got, err := store.Patch(ConfigPatch{
+		ScratchMaxItems:    &maxItems,
+		ScratchMaxItemSize: &maxSize,
+	})
+	if err != nil {
+		t.Fatalf("Patch returned error: %v", err)
+	}
+	if got.ScratchMaxItems != 42 || got.ScratchMaxItemSize != "512KB" {
+		t.Fatalf("patched scratch = %d %q, want 42 512KB", got.ScratchMaxItems, got.ScratchMaxItemSize)
+	}
+
+	reloaded, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if reloaded.ScratchMaxItems != 42 || reloaded.ScratchMaxItemSize != "512KB" {
+		t.Fatalf("reloaded scratch = %d %q, want 42 512KB", reloaded.ScratchMaxItems, reloaded.ScratchMaxItemSize)
+	}
+}
+
+func TestStoreRejectsInvalidScratchConfig(t *testing.T) {
+	store := newTestStore(t, `
+scratch:
+  max_items: 0
+  max_item_size: 10MB
+`)
+	if _, err := store.Load(); err == nil {
+		t.Fatal("Load accepted invalid scratch config")
+	}
+}
+
+func TestStoreRejectsInvalidScratchSize(t *testing.T) {
+	store := newTestStore(t, `
+scratch:
+  max_items: 1
+  max_item_size: nope
+`)
+	if _, err := store.Load(); err == nil {
+		t.Fatal("Load accepted invalid scratch size")
+	}
+}
+
+func TestParseByteSize(t *testing.T) {
+	tests := map[string]int64{
+		"1B":    1,
+		"10KB":  10 * 1024,
+		"10MB":  10 * 1024 * 1024,
+		"2GB":   2 * 1024 * 1024 * 1024,
+		"4096":  4096,
+		" 5mb ": 5 * 1024 * 1024,
+	}
+	for input, want := range tests {
+		got, err := ParseByteSize(input)
+		if err != nil {
+			t.Fatalf("ParseByteSize(%q) error = %v", input, err)
+		}
+		if got != want {
+			t.Fatalf("ParseByteSize(%q) = %d, want %d", input, got, want)
+		}
+	}
+}
