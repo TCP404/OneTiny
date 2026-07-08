@@ -339,7 +339,7 @@ function renderPanelTab(): string {
 
       <label class="control-row">
         <span>临时列表容量</span>
-        <input class="number-input" type="number" min="1" max="10000" step="1" value="${status.config.scratchMaxItems}" data-number="scratchMaxItems">
+        <input class="number-input" type="number" min="1" step="1" value="${status.config.scratchMaxItems}" data-number="scratchMaxItems">
       </label>
 
       <label class="control-row">
@@ -709,7 +709,7 @@ async function handleMaxLevelChange(input: HTMLInputElement): Promise<void> {
 }
 
 async function handleScratchMaxItemsChange(input: HTMLInputElement): Promise<void> {
-  const scratchMaxItems = parseIntegerInput(input.value, 1, 10000, "临时列表容量");
+  const scratchMaxItems = parsePositiveIntegerInput(input.value, "临时列表容量");
   if (scratchMaxItems === null) {
     render();
     return;
@@ -845,6 +845,15 @@ function parseIntegerInput(value: string, min: number, max: number, label: strin
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
     notice = `${label}必须在 ${min}-${max} 之间`;
+    return null;
+  }
+  return parsed;
+}
+
+function parsePositiveIntegerInput(value: string, label: string): number | null {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    notice = `${label}必须为正整数`;
     return null;
   }
   return parsed;
