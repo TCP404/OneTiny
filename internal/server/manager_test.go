@@ -10,10 +10,12 @@ import (
 func newTestRuntime(t *testing.T) *runtime.Runtime {
 	t.Helper()
 	return runtime.New(runtime.Snapshot{
-		RootPath:   t.TempDir(),
-		Port:       0,
-		MaxLevel:   1,
-		SessionVal: "session",
+		RootPath:            t.TempDir(),
+		Port:                0,
+		MaxLevel:            1,
+		SessionVal:          "session",
+		ScratchMaxItems:     3,
+		ScratchMaxItemBytes: 128,
 	})
 }
 

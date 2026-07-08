@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/tcp404/OneTiny/internal/accesslog"
 	"github.com/tcp404/OneTiny/internal/runtime"
+	"github.com/tcp404/OneTiny/internal/scratch"
 )
 
 var (
@@ -24,12 +25,14 @@ var (
 type Dependencies struct {
 	Runtime   *runtime.Runtime
 	AccessLog *accesslog.Logger
+	Scratch   *scratch.Store
 }
 
 type Manager struct {
 	mu       sync.Mutex
 	cfg      *runtime.Runtime
 	logger   *accesslog.Logger
+	scratch  *scratch.Store
 	srv      *http.Server
 	listener net.Listener
 	done     chan error
@@ -37,11 +40,15 @@ type Manager struct {
 }
 
 func NewManager(cfg *runtime.Runtime) *Manager {
-	return &Manager{cfg: cfg}
+	return NewManagerWithDependencies(Dependencies{Runtime: cfg})
 }
 
 func NewManagerWithDependencies(deps Dependencies) *Manager {
-	return &Manager{cfg: deps.Runtime, logger: deps.AccessLog}
+	scratchStore := deps.Scratch
+	if scratchStore == nil && deps.Runtime != nil {
+		scratchStore, _ = newScratchStore(deps.Runtime.Snapshot())
+	}
+	return &Manager{cfg: deps.Runtime, logger: deps.AccessLog, scratch: scratchStore}
 }
 
 func (m *Manager) Start() error {
@@ -55,7 +62,7 @@ func (m *Manager) Start() error {
 		return ErrServerAlreadyRunning
 	}
 
-	srv, listener, err := prepareServer(m.cfg.Snapshot(), m.cfg, m.logger)
+	srv, listener, err := prepareServer(m.cfg.Snapshot(), m.cfg, m.logger, m.scratch)
 	if err != nil {
 		return err
 	}
@@ -129,7 +136,7 @@ func (m *Manager) RestartWithSnapshot(snapshot runtime.Snapshot, commit func() e
 	}
 	m.mu.Unlock()
 
-	nextSrv, nextListener, err := prepareServer(snapshot, m.cfg, m.logger)
+	nextSrv, nextListener, err := prepareServer(snapshot, m.cfg, m.logger, m.scratch)
 	if err != nil {
 		return err
 	}
@@ -153,6 +160,10 @@ func (m *Manager) RestartWithSnapshot(snapshot runtime.Snapshot, commit func() e
 			return err
 		}
 	}
+	if err := m.updateScratchLimits(snapshot); err != nil {
+		m.mu.Unlock()
+		return err
+	}
 	oldSrv := m.srv
 	oldListener := m.listener
 	oldDone := m.done
@@ -172,12 +183,22 @@ func (m *Manager) ApplyRuntime(patch runtime.Patch) error {
 	if m.cfg == nil {
 		return ErrRuntimeRequired
 	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.cfg.Update(patch)
-	return nil
+	return m.updateScratchLimits(m.cfg.Snapshot())
 }
 
 func (m *Manager) Config() *runtime.Runtime {
 	return m.cfg
+}
+
+func (m *Manager) Scratch() *scratch.Store {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.scratch
 }
 
 func (m *Manager) Done() <-chan error {
@@ -218,12 +239,12 @@ func (m *Manager) serve(srv *http.Server, listener net.Listener, done chan<- err
 	done <- err
 }
 
-func prepareServer(snapshot runtime.Snapshot, rt *runtime.Runtime, logger *accesslog.Logger) (*http.Server, net.Listener, error) {
+func prepareServer(snapshot runtime.Snapshot, rt *runtime.Runtime, logger *accesslog.Logger, scratchStore *scratch.Store) (*http.Server, net.Listener, error) {
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(snapshot.Port))
 	if err != nil {
 		return nil, nil, fmt.Errorf("start server: %w", err)
 	}
-	srv, err := defaultBuildHTTPServer(listener, rt, logger)
+	srv, err := defaultBuildHTTPServer(listener, rt, logger, scratchStore)
 	if err != nil {
 		_ = listener.Close()
 		return nil, nil, err
@@ -231,10 +252,10 @@ func prepareServer(snapshot runtime.Snapshot, rt *runtime.Runtime, logger *acces
 	return srv, listener, nil
 }
 
-func defaultBuildHTTPServer(listener net.Listener, rt *runtime.Runtime, logger *accesslog.Logger) (*http.Server, error) {
+func defaultBuildHTTPServer(listener net.Listener, rt *runtime.Runtime, logger *accesslog.Logger, scratchStore *scratch.Store) (*http.Server, error) {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	if err := setupEngine(r, rt, logger); err != nil {
+	if err := setupEngine(r, rt, logger, scratchStore); err != nil {
 		return nil, err
 	}
 	return &http.Server{
@@ -271,13 +292,40 @@ func shutdownPrevious(srv *http.Server, listener net.Listener, done <-chan error
 
 func applySnapshot(cfg *runtime.Runtime, snapshot runtime.Snapshot) {
 	cfg.Update(runtime.Patch{
-		RootPath:      &snapshot.RootPath,
-		Port:          &snapshot.Port,
-		MaxLevel:      &snapshot.MaxLevel,
-		IsAllowUpload: &snapshot.IsAllowUpload,
-		IsSecure:      &snapshot.IsSecure,
-		Username:      &snapshot.Username,
-		PasswordHash:  &snapshot.PasswordHash,
-		SessionVal:    &snapshot.SessionVal,
+		RootPath:            &snapshot.RootPath,
+		Port:                &snapshot.Port,
+		MaxLevel:            &snapshot.MaxLevel,
+		IsAllowUpload:       &snapshot.IsAllowUpload,
+		IsSecure:            &snapshot.IsSecure,
+		Username:            &snapshot.Username,
+		PasswordHash:        &snapshot.PasswordHash,
+		SessionVal:          &snapshot.SessionVal,
+		ScratchMaxItems:     &snapshot.ScratchMaxItems,
+		ScratchMaxItemSize:  &snapshot.ScratchMaxItemSize,
+		ScratchMaxItemBytes: &snapshot.ScratchMaxItemBytes,
 	})
+}
+
+func (m *Manager) updateScratchLimits(snapshot runtime.Snapshot) error {
+	limits := scratchLimitsFromSnapshot(snapshot)
+	if m.scratch == nil {
+		scratchStore, err := scratch.NewStore(limits)
+		if err != nil {
+			return err
+		}
+		m.scratch = scratchStore
+		return nil
+	}
+	return m.scratch.UpdateLimits(limits)
+}
+
+func newScratchStore(snapshot runtime.Snapshot) (*scratch.Store, error) {
+	return scratch.NewStore(scratchLimitsFromSnapshot(snapshot))
+}
+
+func scratchLimitsFromSnapshot(snapshot runtime.Snapshot) scratch.Limits {
+	return scratch.Limits{
+		MaxItems:     snapshot.ScratchMaxItems,
+		MaxItemBytes: int(snapshot.ScratchMaxItemBytes),
+	}
 }

@@ -4,10 +4,11 @@ import (
 	"html/template"
 
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/internal/scratch"
 	"github.com/tcp404/OneTiny/resource"
 )
 
-func Setup(r *gin.Engine) error {
+func Setup(r *gin.Engine, _ *scratch.Store) error {
 
 	t, err := template.ParseFS(resource.FS, "template/*.tpl")
 	if err != nil {
