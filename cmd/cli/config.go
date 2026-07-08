@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -42,6 +43,14 @@ func beforeConfigAction(c *cli.Context) error {
 			return err
 		}
 	}
+	if c.IsSet("scratch-max-items") && c.Int("scratch-max-items") < 1 {
+		return errors.New("临时列表容量必须大于 0")
+	}
+	if c.IsSet("scratch-max-item-size") {
+		if _, err := config.ParseByteSize(c.String("scratch-max-item-size")); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -76,6 +85,14 @@ func configAction(store *config.Store, c *cli.Context) error {
 	if c.IsSet("secure") {
 		secure := c.Bool("secure")
 		patch.IsSecure = &secure
+	}
+	if c.IsSet("scratch-max-items") {
+		maxItems := c.Int("scratch-max-items")
+		patch.ScratchMaxItems = &maxItems
+	}
+	if c.IsSet("scratch-max-item-size") {
+		maxSize := c.String("scratch-max-item-size")
+		patch.ScratchMaxItemSize = &maxSize
 	}
 	if _, err := store.Patch(patch); err != nil {
 		return cli.Exit(err.Error(), 11)
