@@ -19,6 +19,7 @@
             --brand-dark: #0f7f5d;
             --blue: #2e6fd3;
             --amber: #bd7a14;
+            --danger: #b3261e;
             --shadow: 0 12px 30px rgba(26, 38, 52, 0.08);
         }
 
@@ -136,11 +137,16 @@
         }
 
         .button:disabled,
-        .button.primary:disabled {
+        .button.primary:disabled,
+        .button.is-disabled {
             border-color: var(--line);
             background: #edf2f6;
             color: #95a0ab;
             cursor: not-allowed;
+        }
+
+        .button.is-disabled {
+            pointer-events: none;
         }
 
         .view-button {
@@ -249,12 +255,20 @@
             font-size: 12px;
         }
 
+        .upload-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 9px;
+            min-width: min(520px, 100%);
+        }
+
         .upload-form {
             display: flex;
             align-items: center;
             justify-content: flex-end;
             gap: 8px;
-            min-width: min(440px, 100%);
+            width: 100%;
         }
 
         .file-input {
@@ -274,6 +288,50 @@
             white-space: nowrap;
             color: var(--muted);
             font-size: 12px;
+        }
+
+        .upload-feedback {
+            width: 100%;
+        }
+
+        .upload-status-line {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 6px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .upload-status-line.is-success {
+            color: var(--brand-dark);
+        }
+
+        .upload-status-line.is-error {
+            color: var(--danger);
+        }
+
+        .upload-percent {
+            flex: 0 0 auto;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .upload-progress {
+            height: 7px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: #edf2f6;
+        }
+
+        .upload-progress-bar {
+            display: block;
+            width: 0;
+            height: 100%;
+            border-radius: inherit;
+            background: var(--brand);
+            transition: width 160ms ease;
         }
 
         .searchbar {
@@ -531,6 +589,7 @@
 
             .topbar,
             .upload-panel,
+            .upload-controls,
             .upload-form {
                 align-items: stretch;
                 flex-direction: column;
@@ -611,13 +670,24 @@
                 <strong>上传到当前目录</strong>
                 <span>选择文件后点击上传，文件会保存到当前目录。</span>
             </div>
-            <form class="upload-form" action="/file/upload" method="post" enctype="multipart/form-data" data-upload-form>
-                <input type="hidden" name="path" value="{{- .pathTitle -}}">
-                <input class="file-input" id="uploadFile" type="file" name="upload_file">
-                <span class="file-picker-name" data-file-name>未选择文件</span>
-                <label class="button" for="uploadFile">选择文件</label>
-                <button class="button primary" type="submit" data-upload-submit disabled>上传</button>
-            </form>
+            <div class="upload-controls">
+                <form class="upload-form" action="/file/upload" method="post" enctype="multipart/form-data" data-upload-form>
+                    <input type="hidden" name="path" value="{{- .pathTitle -}}">
+                    <input class="file-input" id="uploadFile" type="file" name="upload_file">
+                    <span class="file-picker-name" data-file-name>未选择文件</span>
+                    <label class="button" for="uploadFile" data-upload-choose>选择文件</label>
+                    <button class="button primary" type="submit" data-upload-submit disabled>上传</button>
+                </form>
+                <div class="upload-feedback" data-upload-feedback hidden>
+                    <div class="upload-status-line" data-upload-status-line>
+                        <span data-upload-status role="status" aria-live="polite">准备上传</span>
+                        <span class="upload-percent" data-upload-percent>0%</span>
+                    </div>
+                    <div class="upload-progress" data-upload-progress aria-hidden="true">
+                        <span class="upload-progress-bar" data-upload-progress-bar></span>
+                    </div>
+                </div>
+            </div>
         </section>
         {{end}}
 
@@ -717,7 +787,13 @@
             var fileInput = document.getElementById("uploadFile");
             var fileName = document.querySelector("[data-file-name]");
             var uploadForm = document.querySelector("[data-upload-form]");
+            var uploadChoose = document.querySelector("[data-upload-choose]");
             var uploadSubmit = document.querySelector("[data-upload-submit]");
+            var uploadFeedback = document.querySelector("[data-upload-feedback]");
+            var uploadStatusLine = document.querySelector("[data-upload-status-line]");
+            var uploadStatus = document.querySelector("[data-upload-status]");
+            var uploadPercent = document.querySelector("[data-upload-percent]");
+            var uploadProgressBar = document.querySelector("[data-upload-progress-bar]");
             var viewButtons = Array.prototype.slice.call(document.querySelectorAll("[data-view-toggle]"));
 
             function setView(view) {
@@ -763,6 +839,60 @@
                 }
                 if (totalCount) {
                     totalCount.textContent = String(Object.keys(allNames).length);
+                }
+            }
+
+            function hasSelectedUploadFile() {
+                return Boolean(fileInput && fileInput.files && fileInput.files.length > 0);
+            }
+
+            function setUploadBusy(isBusy) {
+                if (fileInput) {
+                    fileInput.disabled = isBusy;
+                }
+                if (uploadChoose) {
+                    uploadChoose.classList.toggle("is-disabled", isBusy);
+                }
+                if (uploadSubmit) {
+                    uploadSubmit.disabled = isBusy || !hasSelectedUploadFile();
+                }
+            }
+
+            function setUploadProgress(percent, message, state) {
+                var safePercent = Math.max(0, Math.min(100, percent));
+                if (uploadFeedback) {
+                    uploadFeedback.hidden = false;
+                }
+                if (uploadStatus) {
+                    uploadStatus.textContent = message;
+                }
+                if (uploadPercent) {
+                    uploadPercent.textContent = String(Math.round(safePercent)) + "%";
+                }
+                if (uploadProgressBar) {
+                    uploadProgressBar.style.width = String(safePercent) + "%";
+                }
+                if (uploadStatusLine) {
+                    uploadStatusLine.classList.toggle("is-success", state === "success");
+                    uploadStatusLine.classList.toggle("is-error", state === "error");
+                }
+            }
+
+            function hideUploadProgress() {
+                if (uploadStatus) {
+                    uploadStatus.textContent = "准备上传";
+                }
+                if (uploadPercent) {
+                    uploadPercent.textContent = "0%";
+                }
+                if (uploadProgressBar) {
+                    uploadProgressBar.style.width = "0%";
+                }
+                if (uploadStatusLine) {
+                    uploadStatusLine.classList.remove("is-success", "is-error");
+                }
+                if (uploadFeedback) {
+                    uploadFeedback.hidden = true;
                 }
             }
 
@@ -812,19 +942,65 @@
 
             if (fileInput && fileName) {
                 fileInput.addEventListener("change", function () {
-                    var hasFile = fileInput.files && fileInput.files.length > 0;
+                    var hasFile = hasSelectedUploadFile();
                     fileName.textContent = hasFile ? fileInput.files[0].name : "未选择文件";
                     if (uploadSubmit) {
                         uploadSubmit.disabled = !hasFile;
                     }
+                    hideUploadProgress();
                 });
             }
 
             if (uploadForm) {
                 uploadForm.addEventListener("submit", function (event) {
-                    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    if (!hasSelectedUploadFile()) {
                         event.preventDefault();
+                        return;
                     }
+
+                    if (!window.FormData || !window.XMLHttpRequest) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    var formData = new FormData(uploadForm);
+                    var xhr = new XMLHttpRequest();
+                    setUploadBusy(true);
+                    setUploadProgress(0, "正在准备上传...", "");
+
+                    if (xhr.upload) {
+                        xhr.upload.addEventListener("progress", function (progressEvent) {
+                            if (!progressEvent.lengthComputable || progressEvent.total <= 0) {
+                                setUploadProgress(8, "正在上传...", "");
+                                return;
+                            }
+                            setUploadProgress((progressEvent.loaded / progressEvent.total) * 100, "正在上传...", "");
+                        });
+                    }
+
+                    xhr.addEventListener("load", function () {
+                        if (xhr.status >= 200 && xhr.status < 400) {
+                            setUploadProgress(100, "上传成功，正在刷新列表...", "success");
+                            window.setTimeout(function () { window.location.reload(); }, 700);
+                            return;
+                        }
+                        setUploadBusy(false);
+                        setUploadProgress(0, "上传失败，请重试。", "error");
+                    });
+
+                    xhr.addEventListener("error", function () {
+                        setUploadBusy(false);
+                        setUploadProgress(0, "上传失败，请检查网络后重试。", "error");
+                    });
+
+                    xhr.addEventListener("abort", function () {
+                        setUploadBusy(false);
+                        setUploadProgress(0, "上传已取消。", "error");
+                    });
+
+                    xhr.open("POST", uploadForm.getAttribute("action") || "/file/upload");
+                    xhr.send(formData);
                 });
             }
 
