@@ -225,7 +225,29 @@ func TestGetItemDownloadSetsContentDisposition(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
 	}
-	want := "attachment; filename=" + item.ID
+	want := "attachment; filename=" + item.ID + ".txt"
+	if got := rec.Header().Get("Content-Disposition"); got != want {
+		t.Fatalf("Content-Disposition = %q, want %q", got, want)
+	}
+}
+
+func TestGetImageDownloadSetsContentDispositionWithExtension(t *testing.T) {
+	store := newTestStore(t, scratch.Limits{MaxItems: 10, MaxItemBytes: 1024})
+	item, err := store.Add(scratch.KindImage, "image/png", pngBytes())
+	if err != nil {
+		t.Fatalf("store.Add returned error: %v", err)
+	}
+	router := newTestRouter(store)
+
+	req := httptest.NewRequest(http.MethodGet, "/scratch/items/"+item.ID+"?download=1", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	want := "attachment; filename=" + item.ID + ".png"
 	if got := rec.Header().Get("Content-Disposition"); got != want {
 		t.Fatalf("Content-Disposition = %q, want %q", got, want)
 	}

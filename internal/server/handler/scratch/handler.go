@@ -78,7 +78,7 @@ func (h handler) get(c *gin.Context) {
 	}
 
 	if c.Query("download") == "1" {
-		c.Header("Content-Disposition", "attachment; filename="+item.ID)
+		c.Header("Content-Disposition", "attachment; filename="+downloadFilename(item))
 	}
 	c.Data(http.StatusOK, item.MimeType, item.Data)
 }
@@ -202,6 +202,29 @@ func normalizeMIMEType(value string) string {
 		value = mediaType
 	}
 	return strings.ToLower(value)
+}
+
+func downloadFilename(item scratch.Item) string {
+	return item.ID + extensionForItem(item)
+}
+
+func extensionForItem(item scratch.Item) string {
+	switch item.Kind {
+	case scratch.KindText:
+		return ".txt"
+	case scratch.KindImage:
+		switch item.MimeType {
+		case "image/png":
+			return ".png"
+		case "image/jpeg":
+			return ".jpg"
+		case "image/gif":
+			return ".gif"
+		case "image/webp":
+			return ".webp"
+		}
+	}
+	return ""
 }
 
 func (h handler) handleCreateError(c *gin.Context, status int, message string) {
