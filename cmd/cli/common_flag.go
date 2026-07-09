@@ -49,5 +49,19 @@ func newGlobalFlag(defaults runtime.Snapshot) []cli.Flag {
 			Required:    false,
 			DefaultText: strconv.FormatBool(defaults.IsSecure),
 		},
+		&cli.IntFlag{
+			Name:        "scratch-max-items",
+			Usage:       "指定临时列表最多保留的`条目数`",
+			Value:       defaults.ScratchMaxItems,
+			Required:    false,
+			DefaultText: strconv.Itoa(defaults.ScratchMaxItems),
+		},
+		&cli.StringFlag{
+			Name:        "scratch-max-item-size",
+			Usage:       "指定临时列表单条内容大小上限，例如 `10MB`",
+			Value:       defaults.ScratchMaxItemSize,
+			Required:    false,
+			DefaultText: defaults.ScratchMaxItemSize,
+		},
 	}
 }

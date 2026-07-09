@@ -14,11 +14,13 @@ var (
 )
 
 type ConfigDTO struct {
-	RootPath      string `json:"rootPath"`
-	Port          int    `json:"port"`
-	MaxLevel      uint8  `json:"maxLevel"`
-	IsAllowUpload bool   `json:"isAllowUpload"`
-	IsSecure      bool   `json:"isSecure"`
+	RootPath           string `json:"rootPath"`
+	Port               int    `json:"port"`
+	MaxLevel           uint8  `json:"maxLevel"`
+	IsAllowUpload      bool   `json:"isAllowUpload"`
+	IsSecure           bool   `json:"isSecure"`
+	ScratchMaxItems    int    `json:"scratchMaxItems"`
+	ScratchMaxItemSize string `json:"scratchMaxItemSize"`
 }
 
 type StatusDTO struct {
@@ -34,12 +36,14 @@ type StatusDTO struct {
 }
 
 type ConfigPatchDTO struct {
-	RootPath      *string `json:"rootPath,omitempty"`
-	Port          *int    `json:"port,omitempty"`
-	MaxLevel      *uint8  `json:"maxLevel,omitempty"`
-	IsAllowUpload *bool   `json:"isAllowUpload,omitempty"`
-	IsSecure      *bool   `json:"isSecure,omitempty"`
-	RestartPort   bool    `json:"restartPort,omitempty"`
+	RootPath           *string `json:"rootPath,omitempty"`
+	Port               *int    `json:"port,omitempty"`
+	MaxLevel           *uint8  `json:"maxLevel,omitempty"`
+	IsAllowUpload      *bool   `json:"isAllowUpload,omitempty"`
+	IsSecure           *bool   `json:"isSecure,omitempty"`
+	ScratchMaxItems    *int    `json:"scratchMaxItems,omitempty"`
+	ScratchMaxItemSize *string `json:"scratchMaxItemSize,omitempty"`
+	RestartPort        bool    `json:"restartPort,omitempty"`
 }
 
 type CredentialPatchDTO struct {

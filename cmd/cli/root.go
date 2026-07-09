@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -74,11 +75,23 @@ func rootAction(c *cli.Context, runtimeState *runtime.Runtime) error {
 	maxLevel := uint8(c.Int("max"))
 	allowUpload := c.Bool("allow")
 	secure := c.Bool("secure")
+	scratchMaxItems := c.Int("scratch-max-items")
+	if scratchMaxItems < 1 {
+		return errors.New("临时列表容量必须大于 0")
+	}
+	scratchMaxItemSize := c.String("scratch-max-item-size")
+	scratchMaxItemBytes, err := config.ParseByteSize(scratchMaxItemSize)
+	if err != nil {
+		return err
+	}
 	patch := runtime.Patch{
-		Port:          &port,
-		MaxLevel:      &maxLevel,
-		IsAllowUpload: &allowUpload,
-		IsSecure:      &secure,
+		Port:                &port,
+		MaxLevel:            &maxLevel,
+		IsAllowUpload:       &allowUpload,
+		IsSecure:            &secure,
+		ScratchMaxItems:     &scratchMaxItems,
+		ScratchMaxItemSize:  &scratchMaxItemSize,
+		ScratchMaxItemBytes: &scratchMaxItemBytes,
 	}
 	if c.IsSet("road") {
 		road := c.Path("road")

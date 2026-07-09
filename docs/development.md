@@ -22,6 +22,7 @@
 - HTTP server 生命周期和路由：`internal/server/`
 - HTTP handler：`internal/server/handler/`
 - 文件共享领域逻辑：`internal/share/`
+- 临时列表领域逻辑：`internal/scratch/`
 - 配置读写：`internal/config/`
 - 当前进程状态：`internal/runtime/`
 - 密码和凭据：`internal/security/`
@@ -55,6 +56,7 @@
 - `configFromViper`
 - `internal/runtime.PersistentConfig` 和 `runtime.Snapshot`
 - CLI flag 或 GUI DTO，如果该字段对用户可见
+- scratch 限制字段还需要更新 CLI root flag、`onetiny config`、GUI DTO 和 Wails bindings。
 - 对应测试
 - [architecture.md](architecture.md) 的配置分类
 

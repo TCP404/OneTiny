@@ -1,6 +1,7 @@
 package routepath
 
 const (
-	Root            = "/"
-	FileGroupPrefix = "/file"
+	Root               = "/"
+	FileGroupPrefix    = "/file"
+	ScratchGroupPrefix = "/scratch"
 )

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,6 +10,16 @@ import (
 	"github.com/tcp404/OneTiny/internal/runtime"
 	"github.com/tcp404/OneTiny/internal/server"
 )
+
+func freeTCPPort(t *testing.T) int {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen tcp: %v", err)
+	}
+	defer listener.Close()
+	return listener.Addr().(*net.TCPAddr).Port
+}
 
 func newTestService(t *testing.T) (*Service, *config.Store, *runtime.Runtime) {
 	t.Helper()
@@ -72,5 +83,131 @@ func TestUpdateConfigPersistsAndUpdatesRuntime(t *testing.T) {
 	}
 	if status.Config.Port != nextPort {
 		t.Fatalf("status port = %d, want %d", status.Config.Port, nextPort)
+	}
+}
+
+func TestUpdateConfigPersistsScratchLimitsAndUpdatesRuntime(t *testing.T) {
+	svc, store, rt := newTestService(t)
+	maxItems := 25
+	maxSize := "2MB"
+
+	status, err := svc.UpdateConfig(ConfigPatchDTO{
+		ScratchMaxItems:    &maxItems,
+		ScratchMaxItemSize: &maxSize,
+	})
+	if err != nil {
+		t.Fatalf("UpdateConfig returned error: %v", err)
+	}
+
+	if store.Current().ScratchMaxItems != 25 || store.Current().ScratchMaxItemSize != "2MB" {
+		t.Fatalf("stored scratch config = %d %q", store.Current().ScratchMaxItems, store.Current().ScratchMaxItemSize)
+	}
+	snapshot := rt.Snapshot()
+	if snapshot.ScratchMaxItems != 25 || snapshot.ScratchMaxItemSize != "2MB" || snapshot.ScratchMaxItemBytes != 2*1024*1024 {
+		t.Fatalf("runtime scratch = %+v", snapshot)
+	}
+	if status.Config.ScratchMaxItems != 25 || status.Config.ScratchMaxItemSize != "2MB" {
+		t.Fatalf("status scratch = %+v", status.Config)
+	}
+}
+
+func TestUpdateConfigRestartPortSyncsScratchLimits(t *testing.T) {
+	svc, store, rt := newTestService(t)
+	startPort := freeTCPPort(t)
+	nextPort := freeTCPPort(t)
+	if _, err := svc.UpdateConfig(ConfigPatchDTO{Port: &startPort}); err != nil {
+		t.Fatalf("UpdateConfig start port: %v", err)
+	}
+	if _, err := svc.StartSharing(); err != nil {
+		t.Fatalf("StartSharing: %v", err)
+	}
+	defer func() {
+		if _, err := svc.StopSharing(); err != nil {
+			t.Fatalf("StopSharing: %v", err)
+		}
+	}()
+
+	maxItems := 25
+	maxSize := "2MB"
+	status, err := svc.UpdateConfig(ConfigPatchDTO{
+		Port:               &nextPort,
+		RestartPort:        true,
+		ScratchMaxItems:    &maxItems,
+		ScratchMaxItemSize: &maxSize,
+	})
+	if err != nil {
+		t.Fatalf("UpdateConfig restart port: %v", err)
+	}
+
+	if store.Current().Port != nextPort || store.Current().ScratchMaxItems != 25 || store.Current().ScratchMaxItemSize != "2MB" {
+		t.Fatalf("stored config = %+v", store.Current())
+	}
+	snapshot := rt.Snapshot()
+	if snapshot.Port != nextPort || snapshot.ScratchMaxItems != 25 || snapshot.ScratchMaxItemSize != "2MB" || snapshot.ScratchMaxItemBytes != 2*1024*1024 {
+		t.Fatalf("runtime snapshot = %+v", snapshot)
+	}
+	if !status.Running {
+		t.Fatal("status should report running after confirmed restart")
+	}
+	if status.Config.Port != nextPort || status.Config.ScratchMaxItems != 25 || status.Config.ScratchMaxItemSize != "2MB" {
+		t.Fatalf("status config = %+v", status.Config)
+	}
+}
+
+func TestUpdateConfigRestartPortFailureRollsBackScratchPatch(t *testing.T) {
+	svc, store, rt := newTestService(t)
+	startPort := freeTCPPort(t)
+	if _, err := svc.UpdateConfig(ConfigPatchDTO{Port: &startPort}); err != nil {
+		t.Fatalf("UpdateConfig start port: %v", err)
+	}
+	if _, err := svc.StartSharing(); err != nil {
+		t.Fatalf("StartSharing: %v", err)
+	}
+	defer func() {
+		if _, err := svc.StopSharing(); err != nil {
+			t.Fatalf("StopSharing: %v", err)
+		}
+	}()
+
+	blocker, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatalf("Listen blocker: %v", err)
+	}
+	defer blocker.Close()
+	occupiedPort := blocker.Addr().(*net.TCPAddr).Port
+	beforeConfig := store.Current()
+	beforeSnapshot := rt.Snapshot()
+	maxItems := beforeConfig.ScratchMaxItems + 1
+	maxSize := "2MB"
+
+	_, err = svc.UpdateConfig(ConfigPatchDTO{
+		Port:               &occupiedPort,
+		RestartPort:        true,
+		ScratchMaxItems:    &maxItems,
+		ScratchMaxItemSize: &maxSize,
+	})
+	if err == nil {
+		t.Fatal("UpdateConfig restart port error is nil, want occupied port error")
+	}
+
+	gotConfig := store.Current()
+	if gotConfig.Port != beforeConfig.Port {
+		t.Fatalf("stored port = %d, want %d", gotConfig.Port, beforeConfig.Port)
+	}
+	if gotConfig.ScratchMaxItems != beforeConfig.ScratchMaxItems {
+		t.Fatalf("stored ScratchMaxItems = %d, want %d", gotConfig.ScratchMaxItems, beforeConfig.ScratchMaxItems)
+	}
+	if gotConfig.ScratchMaxItemSize != beforeConfig.ScratchMaxItemSize {
+		t.Fatalf("stored ScratchMaxItemSize = %q, want %q", gotConfig.ScratchMaxItemSize, beforeConfig.ScratchMaxItemSize)
+	}
+	gotSnapshot := rt.Snapshot()
+	if gotSnapshot.Port != beforeSnapshot.Port {
+		t.Fatalf("runtime port = %d, want %d", gotSnapshot.Port, beforeSnapshot.Port)
+	}
+	if gotSnapshot.ScratchMaxItems != beforeSnapshot.ScratchMaxItems {
+		t.Fatalf("runtime ScratchMaxItems = %d, want %d", gotSnapshot.ScratchMaxItems, beforeSnapshot.ScratchMaxItems)
+	}
+	if gotSnapshot.ScratchMaxItemSize != beforeSnapshot.ScratchMaxItemSize {
+		t.Fatalf("runtime ScratchMaxItemSize = %q, want %q", gotSnapshot.ScratchMaxItemSize, beforeSnapshot.ScratchMaxItemSize)
 	}
 }

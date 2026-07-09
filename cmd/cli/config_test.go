@@ -19,6 +19,8 @@ func newConfigTestContext(t *testing.T, values map[string]string) *cli.Context {
 	set.Int("max", 0, "")
 	set.String("road", "", "")
 	set.Bool("secure", false, "")
+	set.Int("scratch-max-items", 0, "")
+	set.String("scratch-max-item-size", "", "")
 	for name, value := range values {
 		if err := set.Set(name, value); err != nil {
 			t.Fatalf("set flag %s: %v", name, err)
@@ -108,5 +110,27 @@ account:
 	}
 	if got := store.Current().IsSecure; got {
 		t.Fatal("account.secure was not disabled")
+	}
+}
+
+func TestConfigActionWritesScratchFlags(t *testing.T) {
+	store := newConfigCommandStore(t, `
+scratch:
+  max_items: 500
+  max_item_size: 10MB
+`)
+
+	err := configAction(store, newConfigTestContext(t, map[string]string{
+		"scratch-max-items":     "33",
+		"scratch-max-item-size": "3MB",
+	}))
+	if err == nil {
+		t.Fatal("configAction returned nil, want cli exit")
+	}
+	if exitErr, ok := err.(cli.ExitCoder); !ok || exitErr.ExitCode() != 0 {
+		t.Fatalf("configAction returned %v, want exit code 0", err)
+	}
+	if store.Current().ScratchMaxItems != 33 || store.Current().ScratchMaxItemSize != "3MB" {
+		t.Fatalf("stored scratch = %d %q", store.Current().ScratchMaxItems, store.Current().ScratchMaxItemSize)
 	}
 }

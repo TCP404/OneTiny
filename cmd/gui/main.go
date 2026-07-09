@@ -40,13 +40,17 @@ func main() {
 }
 
 func runtimeConfigFromConfig(cfg config.Config) runtime.PersistentConfig {
+	sizeBytes, _ := config.ParseByteSize(cfg.ScratchMaxItemSize)
 	return runtime.PersistentConfig{
-		RootPath:      cfg.RootPath,
-		Port:          cfg.Port,
-		MaxLevel:      cfg.MaxLevel,
-		IsAllowUpload: cfg.IsAllowUpload,
-		IsSecure:      cfg.IsSecure,
-		Username:      cfg.Username,
-		PasswordHash:  cfg.PasswordHash,
+		RootPath:            cfg.RootPath,
+		Port:                cfg.Port,
+		MaxLevel:            cfg.MaxLevel,
+		IsAllowUpload:       cfg.IsAllowUpload,
+		IsSecure:            cfg.IsSecure,
+		Username:            cfg.Username,
+		PasswordHash:        cfg.PasswordHash,
+		ScratchMaxItems:     cfg.ScratchMaxItems,
+		ScratchMaxItemSize:  cfg.ScratchMaxItemSize,
+		ScratchMaxItemBytes: sizeBytes,
 	}
 }

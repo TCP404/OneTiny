@@ -7,7 +7,7 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as control$0 from "../control/models.js";
+import * as app$0 from "../app/models.js";
 
 export function ChooseDirectory(current: string): $CancellablePromise<string> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ChooseDirectory", current);
@@ -17,17 +17,17 @@ export function ClearLogs(): $CancellablePromise<void> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ClearLogs");
 }
 
-export function ExportLogs(filter: control$0.LogFilterDTO): $CancellablePromise<string> {
+export function ExportLogs(filter: app$0.LogFilterDTO): $CancellablePromise<string> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.ExportLogs", filter);
 }
 
-export function GetLogs(filter: control$0.LogFilterDTO): $CancellablePromise<control$0.LogEntryDTO[]> {
+export function GetLogs(filter: app$0.LogFilterDTO): $CancellablePromise<app$0.LogEntryDTO[]> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.GetLogs", filter).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
-export function GetStatus(): $CancellablePromise<control$0.StatusDTO> {
+export function GetStatus(): $CancellablePromise<app$0.StatusDTO> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.GetStatus").then(($result: any) => {
         return $$createType2($result);
     });
@@ -37,31 +37,31 @@ export function OpenConfigDir(): $CancellablePromise<void> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.OpenConfigDir");
 }
 
-export function SetCredentials(patch: control$0.CredentialPatchDTO): $CancellablePromise<control$0.StatusDTO> {
+export function SetCredentials(patch: app$0.CredentialPatchDTO): $CancellablePromise<app$0.StatusDTO> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.SetCredentials", patch).then(($result: any) => {
         return $$createType2($result);
     });
 }
 
-export function StartSharing(): $CancellablePromise<control$0.StatusDTO> {
+export function StartSharing(): $CancellablePromise<app$0.StatusDTO> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.StartSharing").then(($result: any) => {
         return $$createType2($result);
     });
 }
 
-export function StopSharing(): $CancellablePromise<control$0.StatusDTO> {
+export function StopSharing(): $CancellablePromise<app$0.StatusDTO> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.StopSharing").then(($result: any) => {
         return $$createType2($result);
     });
 }
 
-export function UpdateConfig(patch: control$0.ConfigPatchDTO): $CancellablePromise<control$0.StatusDTO> {
+export function UpdateConfig(patch: app$0.ConfigPatchDTO): $CancellablePromise<app$0.StatusDTO> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.UpdateConfig", patch).then(($result: any) => {
         return $$createType2($result);
     });
 }
 
 // Private type creation functions
-const $$createType0 = control$0.LogEntryDTO.createFrom;
+const $$createType0 = app$0.LogEntryDTO.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = control$0.StatusDTO.createFrom;
+const $$createType2 = app$0.StatusDTO.createFrom;

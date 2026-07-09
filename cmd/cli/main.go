@@ -74,19 +74,27 @@ func main() {
 }
 
 func runtimeConfigFromConfig(cfg config.Config) runtime.PersistentConfig {
+	sizeBytes, _ := config.ParseByteSize(cfg.ScratchMaxItemSize)
 	return runtime.PersistentConfig{
-		RootPath:      cfg.RootPath,
-		Port:          cfg.Port,
-		MaxLevel:      cfg.MaxLevel,
-		IsAllowUpload: cfg.IsAllowUpload,
-		IsSecure:      cfg.IsSecure,
-		Username:      cfg.Username,
-		PasswordHash:  cfg.PasswordHash,
+		RootPath:            cfg.RootPath,
+		Port:                cfg.Port,
+		MaxLevel:            cfg.MaxLevel,
+		IsAllowUpload:       cfg.IsAllowUpload,
+		IsSecure:            cfg.IsSecure,
+		Username:            cfg.Username,
+		PasswordHash:        cfg.PasswordHash,
+		ScratchMaxItems:     cfg.ScratchMaxItems,
+		ScratchMaxItemSize:  cfg.ScratchMaxItemSize,
+		ScratchMaxItemBytes: sizeBytes,
 	}
 }
 
 func printInfo(snapshot runtime.Snapshot) {
 	log.SetOutput(color.Output)
+	host := snapshot.IP
+	if host == "" {
+		host = "127.0.0.1"
+	}
 	if snapshot.IP != "" {
 		log.Printf("Run on   [ %s ]", color.BlueString("http://%s:%d", snapshot.IP, snapshot.Port))
 	} else {
@@ -94,6 +102,9 @@ func printInfo(snapshot runtime.Snapshot) {
 	}
 
 	log.Printf("Run with [ %s ]", color.BlueString("%s", snapshot.RootPath))
+	log.Printf("Scratch list [ %s ]", color.BlueString("http://%s:%d/scratch/", host, snapshot.Port))
+	log.Printf("Scratch items: [ %s ]", color.BlueString("%d", snapshot.ScratchMaxItems))
+	log.Printf("Scratch item size: [ %s ]", color.BlueString("%s", snapshot.ScratchMaxItemSize))
 	log.Printf("Allow access level: [ %s ]", color.BlueString("%d", snapshot.MaxLevel))
 
 	status := color.RedString("%t", snapshot.IsAllowUpload)

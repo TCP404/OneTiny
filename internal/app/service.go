@@ -114,6 +114,7 @@ func (s *Service) UpdateConfig(patch ConfigPatchDTO) (StatusDTO, error) {
 		persistPatch.Port = &targetPort
 	}
 	if confirmPort && portChanged {
+		previousConfig := s.configStore.Current()
 		savedSnapshot, err := s.persistConfigPatch(persistPatch, runtime.ProcessFromSnapshot(active))
 		if err != nil {
 			s.pendingPort = nil
@@ -122,7 +123,18 @@ func (s *Service) UpdateConfig(patch ConfigPatchDTO) (StatusDTO, error) {
 			return s.statusLocked(), err
 		}
 		if err := s.manager.RestartWithSnapshot(savedSnapshot, nil); err != nil {
-			s.resetPendingPortFailureLocked(active.Port)
+			if rollbackErr := s.restoreConfigLocked(previousConfig); rollbackErr != nil {
+				s.lastErr = fmt.Sprintf("%s; 回滚配置失败: %s", err.Error(), rollbackErr.Error())
+				s.pendingPort = nil
+				s.portRestartRequired = true
+				return s.statusLocked(), err
+			}
+			s.pendingPort = nil
+			s.portRestartRequired = true
+			s.lastErr = err.Error()
+			return s.statusLocked(), err
+		}
+		if err := s.manager.ApplyRuntime(runtimePatchFromSnapshot(active, savedSnapshot)); err != nil {
 			s.lastErr = err.Error()
 			return s.statusLocked(), err
 		}
@@ -326,12 +338,17 @@ func (s *Service) configDTOLocked(snapshot runtime.Snapshot) ConfigDTO {
 	return dto
 }
 
-func (s *Service) resetPendingPortFailureLocked(activePort int) {
-	if _, err := s.configStore.Patch(config.ConfigPatch{Port: &activePort}); err != nil {
-		s.lastErr = err.Error()
-	}
-	s.pendingPort = nil
-	s.portRestartRequired = true
+func (s *Service) restoreConfigLocked(cfg config.Config) error {
+	_, err := s.configStore.Patch(config.ConfigPatch{
+		RootPath:           &cfg.RootPath,
+		Port:               &cfg.Port,
+		MaxLevel:           &cfg.MaxLevel,
+		IsAllowUpload:      &cfg.IsAllowUpload,
+		IsSecure:           &cfg.IsSecure,
+		ScratchMaxItems:    &cfg.ScratchMaxItems,
+		ScratchMaxItemSize: &cfg.ScratchMaxItemSize,
+	})
+	return err
 }
 
 func (s *Service) persistConfigPatch(patch ConfigPatchDTO, process runtime.Process) (runtime.Snapshot, error) {
@@ -343,24 +360,30 @@ func (s *Service) persistConfigPatch(patch ConfigPatchDTO, process runtime.Proce
 }
 
 func runtimeConfigFromConfig(cfg config.Config) runtime.PersistentConfig {
+	sizeBytes, _ := config.ParseByteSize(cfg.ScratchMaxItemSize)
 	return runtime.PersistentConfig{
-		RootPath:      cfg.RootPath,
-		Port:          cfg.Port,
-		MaxLevel:      cfg.MaxLevel,
-		IsAllowUpload: cfg.IsAllowUpload,
-		IsSecure:      cfg.IsSecure,
-		Username:      cfg.Username,
-		PasswordHash:  cfg.PasswordHash,
+		RootPath:            cfg.RootPath,
+		Port:                cfg.Port,
+		MaxLevel:            cfg.MaxLevel,
+		IsAllowUpload:       cfg.IsAllowUpload,
+		IsSecure:            cfg.IsSecure,
+		Username:            cfg.Username,
+		PasswordHash:        cfg.PasswordHash,
+		ScratchMaxItems:     cfg.ScratchMaxItems,
+		ScratchMaxItemSize:  cfg.ScratchMaxItemSize,
+		ScratchMaxItemBytes: sizeBytes,
 	}
 }
 
 func configPatchFromDTO(patch ConfigPatchDTO) config.ConfigPatch {
 	return config.ConfigPatch{
-		RootPath:      patch.RootPath,
-		Port:          patch.Port,
-		MaxLevel:      patch.MaxLevel,
-		IsAllowUpload: patch.IsAllowUpload,
-		IsSecure:      patch.IsSecure,
+		RootPath:           patch.RootPath,
+		Port:               patch.Port,
+		MaxLevel:           patch.MaxLevel,
+		IsAllowUpload:      patch.IsAllowUpload,
+		IsSecure:           patch.IsSecure,
+		ScratchMaxItems:    patch.ScratchMaxItems,
+		ScratchMaxItemSize: patch.ScratchMaxItemSize,
 	}
 }
 
@@ -381,6 +404,15 @@ func runtimePatchFromSnapshot(old, next runtime.Snapshot) runtime.Patch {
 	if old.IsSecure != next.IsSecure {
 		patch.IsSecure = &next.IsSecure
 	}
+	if old.ScratchMaxItems != next.ScratchMaxItems {
+		patch.ScratchMaxItems = &next.ScratchMaxItems
+	}
+	if old.ScratchMaxItemSize != next.ScratchMaxItemSize {
+		patch.ScratchMaxItemSize = &next.ScratchMaxItemSize
+	}
+	if old.ScratchMaxItemBytes != next.ScratchMaxItemBytes {
+		patch.ScratchMaxItemBytes = &next.ScratchMaxItemBytes
+	}
 	return patch
 }
 
@@ -400,16 +432,30 @@ func snapshotWithPatch(snapshot runtime.Snapshot, patch ConfigPatchDTO) runtime.
 	if patch.IsSecure != nil {
 		snapshot.IsSecure = *patch.IsSecure
 	}
+	if patch.ScratchMaxItems != nil {
+		snapshot.ScratchMaxItems = *patch.ScratchMaxItems
+	}
+	if patch.ScratchMaxItemSize != nil {
+		snapshot.ScratchMaxItemSize = *patch.ScratchMaxItemSize
+		sizeBytes, err := config.ParseByteSize(*patch.ScratchMaxItemSize)
+		if err == nil {
+			snapshot.ScratchMaxItemBytes = sizeBytes
+		} else {
+			snapshot.ScratchMaxItemBytes = 0
+		}
+	}
 	return snapshot
 }
 
 func configDTOFromSnapshot(snapshot runtime.Snapshot) ConfigDTO {
 	return ConfigDTO{
-		RootPath:      snapshot.RootPath,
-		Port:          snapshot.Port,
-		MaxLevel:      snapshot.MaxLevel,
-		IsAllowUpload: snapshot.IsAllowUpload,
-		IsSecure:      snapshot.IsSecure,
+		RootPath:           snapshot.RootPath,
+		Port:               snapshot.Port,
+		MaxLevel:           snapshot.MaxLevel,
+		IsAllowUpload:      snapshot.IsAllowUpload,
+		IsSecure:           snapshot.IsSecure,
+		ScratchMaxItems:    snapshot.ScratchMaxItems,
+		ScratchMaxItemSize: snapshot.ScratchMaxItemSize,
 	}
 }
 

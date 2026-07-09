@@ -39,6 +39,8 @@ const mockStatus: StatusDTO = {
     maxLevel: 0,
     isAllowUpload: false,
     isSecure: false,
+    scratchMaxItems: 500,
+    scratchMaxItemSize: "10MB",
   },
   hasCredentials: false,
   configPath: "~/Library/Application Support/tiny/config.yml",
@@ -219,6 +221,12 @@ function applyConfigPatch(config: ConfigDTO, patch: ConfigPatchDTO): ConfigDTO {
   if (patch.isSecure != null) {
     next.isSecure = patch.isSecure;
   }
+  if (patch.scratchMaxItems != null) {
+    next.scratchMaxItems = patch.scratchMaxItems;
+  }
+  if (patch.scratchMaxItemSize != null) {
+    next.scratchMaxItemSize = patch.scratchMaxItemSize;
+  }
   return next;
 }
 
@@ -327,6 +335,16 @@ function renderPanelTab(): string {
       <label class="control-row">
         <span>最大访问层级</span>
         <input class="number-input" type="number" min="0" max="255" step="1" value="${status.config.maxLevel}" data-number="maxLevel">
+      </label>
+
+      <label class="control-row">
+        <span>临时列表容量</span>
+        <input class="number-input" type="number" min="1" step="1" value="${status.config.scratchMaxItems}" data-number="scratchMaxItems">
+      </label>
+
+      <label class="control-row">
+        <span>单条大小上限</span>
+        <input class="number-input" type="text" value="${escapeHtml(status.config.scratchMaxItemSize)}" data-text-setting="scratchMaxItemSize">
       </label>
     </div>
   `;
@@ -559,6 +577,15 @@ function bindEvents(): void {
         void handlePortChange(input);
       } else if (input.dataset.number === "maxLevel") {
         void handleMaxLevelChange(input);
+      } else if (input.dataset.number === "scratchMaxItems") {
+        void handleScratchMaxItemsChange(input);
+      }
+    });
+  });
+  app.querySelectorAll<HTMLInputElement>("[data-text-setting]").forEach((input) => {
+    input.addEventListener("change", () => {
+      if (input.dataset.textSetting === "scratchMaxItemSize") {
+        void handleScratchMaxItemSizeChange(input);
       }
     });
   });
@@ -681,6 +708,39 @@ async function handleMaxLevelChange(input: HTMLInputElement): Promise<void> {
   });
 }
 
+async function handleScratchMaxItemsChange(input: HTMLInputElement): Promise<void> {
+  const scratchMaxItems = parsePositiveIntegerInput(input.value, "临时列表容量");
+  if (scratchMaxItems === null) {
+    render();
+    return;
+  }
+  if (scratchMaxItems === status.config.scratchMaxItems) {
+    return;
+  }
+  runAction(async () => {
+    status = await service.UpdateConfig({ scratchMaxItems });
+    notice = runtimeModeMessage();
+    render();
+  });
+}
+
+async function handleScratchMaxItemSizeChange(input: HTMLInputElement): Promise<void> {
+  const scratchMaxItemSize = input.value.trim();
+  if (!/^[1-9][0-9]*\s*(B|KB|K|MB|M|GB|G)?$/i.test(scratchMaxItemSize)) {
+    notice = "单条大小上限格式无效";
+    render();
+    return;
+  }
+  if (scratchMaxItemSize === status.config.scratchMaxItemSize) {
+    return;
+  }
+  runAction(async () => {
+    status = await service.UpdateConfig({ scratchMaxItemSize });
+    notice = runtimeModeMessage();
+    render();
+  });
+}
+
 async function handleCredentialSave(): Promise<void> {
   if (!credentialDialog) {
     return;
@@ -785,6 +845,15 @@ function parseIntegerInput(value: string, min: number, max: number, label: strin
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
     notice = `${label}必须在 ${min}-${max} 之间`;
+    return null;
+  }
+  return parsed;
+}
+
+function parsePositiveIntegerInput(value: string, label: string): number | null {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    notice = `${label}必须为正整数`;
     return null;
   }
   return parsed;

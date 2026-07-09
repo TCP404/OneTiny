@@ -589,6 +589,7 @@
                 </div>
             </div>
             <div class="top-actions">
+                <a class="button" href="/scratch/">临时列表</a>
                 <div class="view-switch" aria-label="切换视图">
                     <button class="view-button is-active" type="button" data-view-toggle="list" aria-pressed="true">列表</button>
                     <button class="view-button" type="button" data-view-toggle="grid" aria-pressed="false">网格</button>

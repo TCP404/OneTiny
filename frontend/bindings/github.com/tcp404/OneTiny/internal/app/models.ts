@@ -15,6 +15,8 @@ export class ConfigDTO {
     "maxLevel": number;
     "isAllowUpload": boolean;
     "isSecure": boolean;
+    "scratchMaxItems": number;
+    "scratchMaxItemSize": string;
 
     /** Creates a new ConfigDTO instance. */
     constructor($$source: Partial<ConfigDTO> = {}) {
@@ -32,6 +34,12 @@ export class ConfigDTO {
         }
         if (!("isSecure" in $$source)) {
             this["isSecure"] = false;
+        }
+        if (!("scratchMaxItems" in $$source)) {
+            this["scratchMaxItems"] = 0;
+        }
+        if (!("scratchMaxItemSize" in $$source)) {
+            this["scratchMaxItemSize"] = "";
         }
 
         Object.assign(this, $$source);
@@ -52,6 +60,8 @@ export class ConfigPatchDTO {
     "maxLevel"?: number | null;
     "isAllowUpload"?: boolean | null;
     "isSecure"?: boolean | null;
+    "scratchMaxItems"?: number | null;
+    "scratchMaxItemSize"?: string | null;
     "restartPort"?: boolean;
 
     /** Creates a new ConfigPatchDTO instance. */
