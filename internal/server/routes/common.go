@@ -28,7 +28,7 @@ func loadICORoute(app *gin.Engine) {
 
 func loadLogoRoute(app *gin.Engine) {
 	app.GET("logo.png", func(c *gin.Context) {
-		file, _ := resource.FS.ReadFile("logo/logo-white.png")
+		file, _ := resource.FS.ReadFile("logo/logo.png")
 		c.Data(http.StatusOK, "image/png", file)
 	})
 }

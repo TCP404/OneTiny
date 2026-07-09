@@ -130,6 +130,25 @@ rtk npm run build --prefix frontend
 rtk go build ./cmd/gui
 ```
 
+## 品牌资源规范
+
+品牌资源采用一源多产物：
+
+- 源文件：`resource/logo/logo.png` 和 `resource/logo/favicon.ico`。
+- HTTP 页面：`/logo.png` 和 `/favicon.ico` 从 `resource/logo/` 嵌入资源读取。
+- GUI 前端：`frontend/vite.config.ts` 的 `publicDir` 指向 `../resource/logo`，构建后进入 `internal/gui/webassets/dist/`。
+- GUI/Wails 运行时图标：`internal/gui/assets/appicon.png` 是从 `resource/logo/logo.png` 生成的受控副本，用于 Go embed，不手改。
+- 打包图标：`build/appicon.png`、`build/darwin/icons.icns`、`build/windows/icon.ico` 是本地或 CI 构建产物，不作为源文件维护。
+
+更新 logo 时，修改 `resource/logo/logo.png` 后运行：
+
+```bash
+rtk just _icons
+rtk npm run build --prefix frontend
+```
+
+`README/logo.svg` 仅作为 README 展示素材，不参与运行时或发布构建。
+
 ## 测试规范
 
 日常 Go 变更至少跑：

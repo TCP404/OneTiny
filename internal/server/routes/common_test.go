@@ -8,9 +8,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/tcp404/OneTiny/resource"
 )
 
-func TestLogoRouteServesWhiteBackgroundPNG(t *testing.T) {
+func TestLogoRouteServesCanonicalLogo(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	loadLogoRoute(r)
@@ -30,5 +31,13 @@ func TestLogoRouteServesWhiteBackgroundPNG(t *testing.T) {
 	}
 	if cfg.Width != 512 || cfg.Height != 512 {
 		t.Fatalf("logo size = %dx%d, want 512x512", cfg.Width, cfg.Height)
+	}
+
+	want, err := resource.FS.ReadFile("logo/logo.png")
+	if err != nil {
+		t.Fatalf("read canonical logo: %v", err)
+	}
+	if !bytes.Equal(rec.Body.Bytes(), want) {
+		t.Fatal("/logo.png did not serve resource/logo/logo.png")
 	}
 }
