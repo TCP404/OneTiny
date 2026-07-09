@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/tcp404/OneTiny/compare/v0.10.1...v0.11.0) (2026-07-09)
+
+
+### Features
+
+* **web:** add upload progress feedback ([#23](https://github.com/tcp404/OneTiny/issues/23)) ([85cb643](https://github.com/tcp404/OneTiny/commit/85cb643a9a6ce73aae02da9471167fa19b498e53))
+
 ## [0.10.1](https://github.com/tcp404/OneTiny/compare/v0.10.0...v0.10.1) (2026-07-09)
 
 
