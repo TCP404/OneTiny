@@ -343,6 +343,27 @@ func TestIndexRendersTextPreviewWithoutFullContent(t *testing.T) {
 	}
 }
 
+func TestIndexRendersClipboardFallback(t *testing.T) {
+	store := newTestStore(t, scratch.Limits{MaxItems: 10, MaxItemBytes: 1024})
+	if _, err := store.Add(scratch.KindText, scratch.TextMIME, []byte("hello")); err != nil {
+		t.Fatalf("store.Add returned error: %v", err)
+	}
+	router := newTemplateRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodGet, "/scratch/", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `document.execCommand("copy")`) {
+		t.Fatalf("index should render clipboard fallback for non-secure contexts")
+	}
+}
+
 func newTestStore(t *testing.T, limits scratch.Limits) *scratch.Store {
 	t.Helper()
 	store, err := scratch.NewStore(limits)

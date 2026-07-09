@@ -72,6 +72,7 @@ func TestListTemplateRendersPolishedFileBrowserControls(t *testing.T) {
 	assertContains(t, html, `function setView(view)`)
 	assertContains(t, html, `onetiny.fileView`)
 	assertContains(t, html, `上传到当前目录`)
+	assertOrder(t, html, `class="searchbar"`, `class="upload-panel"`, `class="pathbar"`, `class="content-panel"`)
 	assertNotContains(t, html, `data-focus-upload`)
 	assertNotContains(t, html, `目录，点击进入`)
 	assertNotContains(t, html, `文件，点击打开`)
@@ -155,5 +156,17 @@ func assertNotContains(t *testing.T, value, unwanted string) {
 	t.Helper()
 	if strings.Contains(value, unwanted) {
 		t.Fatalf("rendered template contains unwanted %q\nbody:\n%s", unwanted, value)
+	}
+}
+
+func assertOrder(t *testing.T, value string, needles ...string) {
+	t.Helper()
+	cursor := 0
+	for _, needle := range needles {
+		index := strings.Index(value[cursor:], needle)
+		if index < 0 {
+			t.Fatalf("rendered template does not contain %q after offset %d\nbody:\n%s", needle, cursor, value)
+		}
+		cursor += index + len(needle)
 	}
 }

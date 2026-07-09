@@ -1,6 +1,10 @@
 package gui
 
-import "github.com/tcp404/OneTiny/internal/app"
+import (
+	"strings"
+
+	"github.com/tcp404/OneTiny/internal/app"
+)
 
 type Service struct {
 	service *app.Service
@@ -69,6 +73,21 @@ func (s *Service) OpenConfigDir() error {
 		return nil
 	}
 	return s.dialogs.OpenConfigDir()
+}
+
+func (s *Service) OpenShareAddress() error {
+	if s.dialogs == nil {
+		return nil
+	}
+	status, err := s.service.GetStatus()
+	if err != nil {
+		return err
+	}
+	address := strings.TrimSpace(status.Address)
+	if address == "" {
+		return nil
+	}
+	return s.dialogs.OpenURL(address)
 }
 
 func (s *Service) requestQuit(onConfirmed func()) bool {

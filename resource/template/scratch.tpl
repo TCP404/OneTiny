@@ -464,6 +464,45 @@
                 window.alert((error && error.message) || "添加失败");
             }
 
+            function copyTextFallback(text) {
+                return new Promise(function (resolve, reject) {
+                    var textarea = document.createElement("textarea");
+                    var active = document.activeElement;
+                    textarea.value = text;
+                    textarea.setAttribute("readonly", "");
+                    textarea.style.position = "fixed";
+                    textarea.style.left = "-9999px";
+                    textarea.style.top = "0";
+                    textarea.style.opacity = "0";
+                    document.body.appendChild(textarea);
+                    textarea.focus();
+                    textarea.select();
+                    textarea.setSelectionRange(0, textarea.value.length);
+                    try {
+                        if (!document.execCommand("copy")) {
+                            throw new Error("copy command failed");
+                        }
+                        resolve();
+                    } catch (error) {
+                        reject(error);
+                    } finally {
+                        document.body.removeChild(textarea);
+                        if (active && active.focus) {
+                            active.focus();
+                        }
+                    }
+                });
+            }
+
+            function copyText(text) {
+                if (window.navigator && window.navigator.clipboard && window.navigator.clipboard.writeText) {
+                    return window.navigator.clipboard.writeText(text).catch(function () {
+                        return copyTextFallback(text);
+                    });
+                }
+                return copyTextFallback(text);
+            }
+
             function isEditableFocused() {
                 var active = document.activeElement;
                 if (!active) {
@@ -525,7 +564,7 @@
                     })
                     : Promise.resolve(source ? source.value : "");
                 textPromise.then(function (text) {
-                    return window.navigator.clipboard.writeText(text);
+                    return copyText(text);
                 }).then(function () {
                     button.setAttribute("data-copy-done", "true");
                     button.textContent = "已复制";

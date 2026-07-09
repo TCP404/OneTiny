@@ -4,7 +4,7 @@ APP_NAME := OneTiny
 CLI_NAME := onetiny-cli
 BIN_DIR := build/bin
 FRONTEND_DIR := frontend
-LOGO_SVG := README/logo.svg
+LOGO_PNG := resource/logo/logo.png
 APPICON := build/appicon.png
 RUNTIME_ICON := internal/gui/assets/appicon.png
 MAC_ICON := build/darwin/icons.icns
@@ -100,10 +100,9 @@ icons: $(RUNTIME_ICON)
 	cp $(RUNTIME_ICON) $(APPICON)
 	wails3 generate icons -input $(APPICON) -macfilename $(MAC_ICON) -windowsfilename $(WINDOWS_ICON)
 
-$(RUNTIME_ICON): $(LOGO_SVG)
-	command -v rsvg-convert >/dev/null 2>&1 || (echo "rsvg-convert is required to regenerate $(RUNTIME_ICON) from $(LOGO_SVG)" && exit 1)
+$(RUNTIME_ICON): $(LOGO_PNG)
 	mkdir -p internal/gui/assets
-	rsvg-convert -w 1024 -h 1024 -o $(RUNTIME_ICON) $(LOGO_SVG)
+	cp $(LOGO_PNG) $(RUNTIME_ICON)
 
 windows-resource: icons
 	wails3 generate syso -arch $(GOARCH) -icon $(WINDOWS_ICON) -manifest $(WINDOWS_MANIFEST) -info $(WINDOWS_INFO) -out $(WINDOWS_SYSO)

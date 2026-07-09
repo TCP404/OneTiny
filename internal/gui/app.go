@@ -3,6 +3,7 @@ package gui
 import (
 	"embed"
 	"io/fs"
+	stdruntime "runtime"
 	"sync/atomic"
 
 	appsvc "github.com/tcp404/OneTiny/internal/app"
@@ -54,6 +55,11 @@ func Run(assets embed.FS, deps Dependencies) error {
 	})
 
 	quit := func() {
+		if stdruntime.GOOS == "windows" {
+			if status, err := service.GetStatus(); err == nil && status.Running {
+				openPanel()
+			}
+		}
 		if !service.requestQuit(func() {
 			quitting.Store(true)
 			app.Quit()
@@ -65,7 +71,6 @@ func Run(assets embed.FS, deps Dependencies) error {
 	}
 
 	tray := app.SystemTray.New()
-	tray.SetLabel("OneTiny")
 	tray.SetTooltip("OneTiny")
 	tray.SetIcon(appIcon)
 	tray.SetDarkModeIcon(appIcon)

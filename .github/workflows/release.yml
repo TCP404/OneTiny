@@ -185,7 +185,7 @@ jobs:
           npm run build --prefix "${env:FRONTEND_DIR}"
 
           New-Item -ItemType Directory -Force -Path build, build/darwin, build/windows, dist/onetiny-gui-windows-x64 | Out-Null
-          Copy-Item internal/gui/assets/appicon.png build/appicon.png
+          Copy-Item resource/logo/logo.png build/appicon.png
 
           wails3 generate icons -input build/appicon.png -macfilename build/darwin/icons.icns -windowsfilename build/windows/icon.ico
           if (!(Test-Path build/windows/icon.ico)) {

@@ -100,6 +100,7 @@ function createService(): OneTinyService {
     ChooseDirectory: (current) => call("ChooseDirectory", [current], (generated) => generated.ChooseDirectory(current)),
     ExportLogs: (filter) => call("ExportLogs", [filter], (generated) => generated.ExportLogs(filter)),
     OpenConfigDir: () => call("OpenConfigDir", [], (generated) => generated.OpenConfigDir()),
+    OpenShareAddress: () => call("OpenShareAddress", [], (generated) => generated.OpenShareAddress()),
   };
 }
 
@@ -170,6 +171,8 @@ async function mockCall<T>(method: string, args: unknown[]): Promise<T> {
     case "ExportLogs":
       return "/Users/me/Downloads/onetiny-access.csv" as T;
     case "OpenConfigDir":
+      return undefined as T;
+    case "OpenShareAddress":
       return undefined as T;
     case "SetCredentials": {
       const patch = args[0] as {
@@ -257,6 +260,7 @@ function render(): void {
         </div>
         <div class="top-actions">
           <button data-action="copy" ${status.address ? "" : "disabled"}>复制地址</button>
+          <button data-action="open-browser" ${status.address ? "" : "disabled"}>浏览器打开</button>
           <button class="primary" data-action="${status.running ? "stop" : "start"}">
             ${status.running ? "停止共享" : "启动共享"}
           </button>
@@ -267,7 +271,7 @@ function render(): void {
 
       <header class="app-header">
         <div class="brand">
-          <div class="mark">O</div>
+          <img class="brand-logo" src="/logo.png" alt="OneTiny">
           <div>
             <h1>OneTiny</h1>
             <p>局域网文件共享控制面板</p>
@@ -538,6 +542,15 @@ function bindEvents(): void {
       if (status.address) {
         await navigator.clipboard.writeText(status.address);
         notice = "访问地址已复制";
+        render();
+      }
+    });
+  });
+  app.querySelector<HTMLButtonElement>('[data-action="open-browser"]')?.addEventListener("click", () => {
+    runAction(async () => {
+      if (status.address) {
+        await service.OpenShareAddress();
+        notice = "已在浏览器打开";
         render();
       }
     });

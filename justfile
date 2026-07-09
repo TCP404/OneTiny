@@ -6,7 +6,7 @@ app_name := "OneTiny"
 cli_name := "onetiny-cli"
 bin_dir := "build/bin"
 frontend_dir := "frontend"
-logo_svg := "README/logo.svg"
+logo_png := "resource/logo/logo.png"
 appicon := "build/appicon.png"
 runtime_icon := "internal/gui/assets/appicon.png"
 mac_icon := "build/darwin/icons.icns"
@@ -150,15 +150,11 @@ _icons: _runtime-icon
 _runtime-icon:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [[ -f "{{ runtime_icon }}" && ! "{{ logo_svg }}" -nt "{{ runtime_icon }}" ]]; then
+    if [[ -f "{{ runtime_icon }}" && ! "{{ logo_png }}" -nt "{{ runtime_icon }}" ]]; then
       exit 0
     fi
-    command -v rsvg-convert >/dev/null 2>&1 || {
-      echo "rsvg-convert is required to regenerate {{ runtime_icon }} from {{ logo_svg }}"
-      exit 1
-    }
     mkdir -p internal/gui/assets
-    rsvg-convert -w 1024 -h 1024 -o "{{ runtime_icon }}" "{{ logo_svg }}"
+    cp "{{ logo_png }}" "{{ runtime_icon }}"
 
 [private]
 _windows-resource:

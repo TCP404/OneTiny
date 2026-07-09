@@ -597,18 +597,12 @@
             </div>
         </header>
 
-        <section class="pathbar" aria-label="当前路径">
-            <span class="path-label">当前目录</span>
-            <nav class="breadcrumbs" aria-label="面包屑">
-                {{range $i, $crumb := .breadcrumbs}}
-                {{if $i}}<span class="breadcrumb-separator" aria-hidden="true">/</span>{{end}}
-                {{if $crumb.Current}}
-                <span class="breadcrumb-current" aria-current="page">{{$crumb.Name}}</span>
-                {{else}}
-                <a class="breadcrumb-link" href="{{$crumb.URL}}">{{$crumb.Name}}</a>
-                {{end}}
-                {{end}}
-            </nav>
+        <section class="searchbar" aria-label="页面搜索">
+            <div class="search-wrap">
+                <input class="search-input" id="fileSearch" type="search" data-shortcut="mod+k" placeholder="搜索当前页面中的文件或目录">
+                <span class="shortcut">Ctrl / Cmd + K</span>
+            </div>
+            <div class="count"><span data-visible-count>{{len .files}}</span> / <span data-total-count>{{len .files}}</span> 项</div>
         </section>
 
         {{if .upload}}
@@ -627,12 +621,18 @@
         </section>
         {{end}}
 
-        <section class="searchbar" aria-label="页面搜索">
-            <div class="search-wrap">
-                <input class="search-input" id="fileSearch" type="search" data-shortcut="mod+k" placeholder="搜索当前页面中的文件或目录">
-                <span class="shortcut">Ctrl / Cmd + K</span>
-            </div>
-            <div class="count"><span data-visible-count>{{len .files}}</span> / <span data-total-count>{{len .files}}</span> 项</div>
+        <section class="pathbar" aria-label="当前路径">
+            <span class="path-label">当前目录</span>
+            <nav class="breadcrumbs" aria-label="面包屑">
+                {{range $i, $crumb := .breadcrumbs}}
+                {{if $i}}<span class="breadcrumb-separator" aria-hidden="true">/</span>{{end}}
+                {{if $crumb.Current}}
+                <span class="breadcrumb-current" aria-current="page">{{$crumb.Name}}</span>
+                {{else}}
+                <a class="breadcrumb-link" href="{{$crumb.URL}}">{{$crumb.Name}}</a>
+                {{end}}
+                {{end}}
+            </nav>
         </section>
 
         <section class="content-panel" data-file-list>

@@ -30,4 +30,5 @@ export interface OneTinyService {
   ChooseDirectory(current: string): Promise<string>;
   ExportLogs(filter: LogFilterDTO): Promise<string>;
   OpenConfigDir(): Promise<void>;
+  OpenShareAddress(): Promise<void>;
 }
