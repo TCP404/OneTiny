@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/tcp404/OneTiny/compare/v0.9.0...v0.10.0) (2026-07-09)
+
+
+### Features
+
+* add scratch list ([#20](https://github.com/tcp404/OneTiny/issues/20)) ([4ca096c](https://github.com/tcp404/OneTiny/commit/4ca096ca6dba6821d2691118f47fce2324f243f8))
+
+
+### Documentation
+
+* document architecture standards ([9f6dbff](https://github.com/tcp404/OneTiny/commit/9f6dbffb96dfb0d17114ebba77784be9548ec64c))
+
 ## [0.9.0](https://github.com/tcp404/OneTiny/compare/v0.8.0...v0.9.0) (2026-07-08)
 
 
