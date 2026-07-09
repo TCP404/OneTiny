@@ -14,6 +14,7 @@ type DialogAdapter interface {
 	ChooseDirectory(current string) (string, error)
 	ChooseExportPath() (string, error)
 	OpenConfigDir() error
+	OpenURL(url string) error
 	ConfirmQuitWhileRunning(onConfirm func()) error
 }
 
@@ -59,6 +60,10 @@ func (d *WailsDialogAdapter) ChooseExportPath() (string, error) {
 
 func (d *WailsDialogAdapter) OpenConfigDir() error {
 	return openPath(filepath.Clean(d.configDir))
+}
+
+func (d *WailsDialogAdapter) OpenURL(url string) error {
+	return openPath(url)
 }
 
 func (d *WailsDialogAdapter) ConfirmQuitWhileRunning(onConfirm func()) error {

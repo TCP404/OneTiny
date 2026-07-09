@@ -37,6 +37,10 @@ export function OpenConfigDir(): $CancellablePromise<void> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.OpenConfigDir");
 }
 
+export function OpenShareAddress(): $CancellablePromise<void> {
+    return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.OpenShareAddress");
+}
+
 export function SetCredentials(patch: app$0.CredentialPatchDTO): $CancellablePromise<app$0.StatusDTO> {
     return $Call.ByName("github.com/tcp404/OneTiny/internal/gui.Service.SetCredentials", patch).then(($result: any) => {
         return $$createType2($result);

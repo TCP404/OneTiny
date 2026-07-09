@@ -187,15 +187,14 @@ code {
   gap: 12px;
 }
 
-.mark {
-  display: grid;
+.brand-logo {
+  display: block;
   width: 38px;
   height: 38px;
-  place-items: center;
   border-radius: 8px;
-  color: #ffffff;
-  background: #2f7d6d;
-  font-weight: 800;
+  background: #ffffff;
+  object-fit: contain;
+  box-shadow: 0 1px 3px rgba(31, 38, 45, 0.12);
 }
 
 h1,
