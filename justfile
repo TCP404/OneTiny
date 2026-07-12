@@ -28,6 +28,16 @@ info target=target:
 check:
     task check
 
+[doc("Run required checks before commit")]
+[group("Main")]
+precommit:
+    task precommit
+
+[doc("Run required checks before push")]
+[group("Main")]
+prepush:
+    task prepush
+
 [doc("Development build: frontend assets, icons, and GUI binary")]
 [group("Main")]
 dev target=target:
@@ -62,6 +72,26 @@ frontend:
 [group("Build")]
 icons:
     task build:icons
+
+[doc("Format Go source files")]
+[group("Quality")]
+format:
+    task format
+
+[doc("Apply Go source modernization fixes")]
+[group("Quality")]
+fix:
+    task fix
+
+[doc("Run Go lint baseline")]
+[group("Quality")]
+lint:
+    task lint
+
+[doc("Run Go tests")]
+[group("Quality")]
+test:
+    task test
 
 [doc("Build and archive CLI release artifact")]
 [group("Dist")]

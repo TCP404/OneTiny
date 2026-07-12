@@ -43,8 +43,41 @@ tasks:
   check:
     desc: Run baseline Go checks
     cmds:
-      - go test ./...
+      - task: lint
+      - task: test
       - go build ./cmd/cli ./cmd/gui
+
+  format:
+    desc: Format Go source files
+    cmds:
+      - gofmt -w cmd internal resource tools
+
+  fix:
+    desc: Apply Go source modernization fixes
+    cmds:
+      - go fix ./...
+
+  lint:
+    desc: Run Go lint baseline
+    cmds:
+      - go vet ./...
+
+  test:
+    desc: Run Go tests
+    cmds:
+      - go test ./...
+
+  precommit:
+    desc: Required checks before commit
+    cmds:
+      - task: fix
+      - task: format
+      - task: lint
+
+  prepush:
+    desc: Required checks before push
+    cmds:
+      - task: test
 
   build:
     desc: Build the GUI artifact for the current host target
