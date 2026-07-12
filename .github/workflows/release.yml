@@ -118,7 +118,7 @@ jobs:
           go install "github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}"
 
       - name: Build macOS app
-        run: task package:mac TARGET=darwin-arm64 VERSION=${{ inputs.tag_name }}
+        run: task dist:gui TARGET=darwin-arm64 VERSION=${{ inputs.tag_name }}
 
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v7

@@ -42,10 +42,6 @@ func run(args []string) error {
 		return runChecksums(args[1:])
 	case "remove":
 		return runRemove(args[1:])
-	case "package-windows", "package-linux", "sign", "notarize", "installer":
-		return errors.Errorf("%s is reserved for future packaging work; see docs/build.md", args[0])
-	case "package-mac":
-		return errors.New("package-mac is currently orchestrated by Taskfile.yml; move it here when signing or notarization becomes part of the contract")
 	default:
 		return errors.Errorf("unknown command %q", args[0])
 	}

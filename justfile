@@ -4,13 +4,11 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 version := env("VERSION", "v0.6.0")
 target := env("TARGET", "")
 
-alias b := build
 alias d := dev
 alias g := build-gui
 alias c := clean
 alias gui := build-gui
 alias cli := build-cli
-alias package := package-mac
 
 [default]
 [doc("List available recipes")]
@@ -48,11 +46,6 @@ hooks-install:
 dev target=target:
     task build:gui TARGET="{{ target }}" VERSION="{{ version }}"
 
-[doc("Build the default GUI artifact for this host")]
-[group("Main")]
-build target=target:
-    task build TARGET="{{ target }}" VERSION="{{ version }}"
-
 [doc("Build release GUI artifact for TARGET and update checksums")]
 [group("Main")]
 release target=target:
@@ -67,16 +60,6 @@ build-gui target=target:
 [group("Build")]
 build-cli target=target:
     task build:cli TARGET="{{ target }}" VERSION="{{ version }}"
-
-[doc("Build frontend assets")]
-[group("Build")]
-frontend:
-    task build:frontend
-
-[doc("Generate Wails icons")]
-[group("Build")]
-icons:
-    task build:icons
 
 [doc("Format Go source files")]
 [group("Quality")]
@@ -98,6 +81,16 @@ lint:
 test:
     task test
 
+[doc("Produce the installable CLI artifact for TARGET")]
+[group("Package")]
+package-cli target=target:
+    task package:cli TARGET="{{ target }}" VERSION="{{ version }}"
+
+[doc("Produce the installable GUI artifact for TARGET")]
+[group("Package")]
+package-gui target=target:
+    task package:gui TARGET="{{ target }}" VERSION="{{ version }}"
+
 [doc("Build and archive CLI release artifact")]
 [group("Dist")]
 dist-cli target=target:
@@ -113,34 +106,7 @@ dist-gui target=target:
 checksums:
     task dist:checksums
 
-[doc("macOS: create and archive build/bin/OneTiny.app")]
-[group("Package")]
-package-mac target=target:
-    task package:mac TARGET="{{ target }}" VERSION="{{ version }}"
-
-[doc("Windows package placeholder")]
-[group("Package")]
-package-windows:
-    task package:windows
-
-[doc("Linux package placeholder")]
-[group("Package")]
-package-linux:
-    task package:linux
-
 [doc("Remove build and dist artifacts")]
 [group("Maintenance")]
 clean:
     task clean
-
-[private]
-_frontend:
-    task build:frontend
-
-[private]
-_icons:
-    task build:icons
-
-[private]
-_windows-resource target=target:
-    task build:windows-resource TARGET="{{ target }}"

@@ -87,15 +87,6 @@ tasks:
       - '{{.BUILD_TOOL}} verify --path ".githooks/pre-commit" --kind file'
       - '{{.BUILD_TOOL}} verify --path ".githooks/pre-push" --kind file'
 
-  build:
-    desc: Build the GUI artifact for the current host target
-    vars:
-      TARGET: '{{.TARGET | default .HOST_TARGET}}'
-    cmds:
-      - task: build:gui
-        vars:
-          TARGET: '{{.TARGET}}'
-
   release:
     desc: Build release artifacts for TARGET
     vars:
@@ -108,12 +99,14 @@ tasks:
 
   build:frontend:
     desc: Install and build frontend assets
+    internal: true
     cmds:
       - npm install --prefix "{{.FRONTEND_DIR}}"
       - npm run build --prefix "{{.FRONTEND_DIR}}"
 
   build:icons:
     desc: Generate Wails icon assets
+    internal: true
     cmds:
       - '{{.BUILD_TOOL}} copy-file --src "{{.LOGO_PNG}}" --dst "{{.RUNTIME_ICON}}"'
       - '{{.BUILD_TOOL}} ensure-dir --path build --path build/darwin --path build/windows'
@@ -124,6 +117,7 @@ tasks:
 
   build:windows-resource:
     desc: Generate Windows GUI syso resources
+    internal: true
     vars:
       TARGET: '{{.TARGET | default .HOST_TARGET}}'
       TARGET_GOARCH:
@@ -160,23 +154,42 @@ tasks:
       GUI_BINARY_PATH:
         sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field binary-path'
     cmds:
-      - task: build:windows-resource
+      - if: '{{eq .TARGET_GOOS "windows"}}'
+        task: build:windows-resource
         vars:
           TARGET: '{{.TARGET}}'
-        if: '{{eq .TARGET_GOOS "windows"}}'
       - '{{.BUILD_TOOL}} ensure-dir --path "{{.GUI_STAGING_DIR}}"'
       - '{{.BUILD_TOOL}} go-build --target "{{.TARGET}}" --kind gui --version "{{.VERSION}}" --output "{{.GUI_BINARY_PATH}}" --package "{{.GUI_MAIN}}"'
       - '{{.BUILD_TOOL}} verify --path "{{.GUI_BINARY_PATH}}" --kind file'
 
+  package:cli:
+    desc: Produce the installable CLI artifact for TARGET
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+    cmds:
+      - task: build:cli
+        vars:
+          TARGET: '{{.TARGET}}'
+
+  package:gui:
+    desc: Produce the installable GUI artifact for TARGET
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+      TARGET_GOOS:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field goos'
+    cmds:
+      - task: 'package:{{if eq .TARGET_GOOS "darwin"}}mac{{else if eq .TARGET_GOOS "windows"}}windows{{else}}linux{{end}}'
+        vars:
+          TARGET: '{{.TARGET}}'
+
   package:mac:
-    desc: "macOS package: create and archive OneTiny.app"
+    desc: "macOS package: create and sign OneTiny.app"
+    internal: true
     platforms: [darwin]
     vars:
       TARGET: '{{.TARGET | default .HOST_TARGET}}'
       GUI_BINARY_PATH:
         sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field binary-path'
-      GUI_ZIP_PATH:
-        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field zip-path'
       MAC_APP:
         sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field mac-app-path'
     cmds:
@@ -191,17 +204,22 @@ tasks:
       - '{{.BUILD_TOOL}} copy-file --src "{{.MAC_INFO}}" --dst "{{.MAC_APP}}/Contents/Info.plist"'
       - codesign --force --deep --sign - "{{.MAC_APP}}"
       - '{{.BUILD_TOOL}} verify --path "{{.MAC_APP}}" --kind dir'
-      - '{{.BUILD_TOOL}} archive --input "{{.MAC_APP}}" --output "{{.GUI_ZIP_PATH}}" --entry-name "{{.APP_NAME}}.app"'
 
   package:windows:
-    desc: Windows installer/package placeholder
+    desc: "Windows package: build GUI binary (installer TODO)"
+    internal: true
     cmds:
-      - '{{.BUILD_TOOL}} package-windows'
+      - task: build:gui
+        vars:
+          TARGET: '{{.TARGET | default .HOST_TARGET}}'
 
   package:linux:
-    desc: Linux package placeholder
+    desc: "Linux package: build GUI binary (packaging TODO)"
+    internal: true
     cmds:
-      - '{{.BUILD_TOOL}} package-linux'
+      - task: build:gui
+        vars:
+          TARGET: '{{.TARGET | default .HOST_TARGET}}'
 
   dist:cli:
     desc: Build and archive CLI release artifact
@@ -215,7 +233,7 @@ tasks:
         sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind cli --field zip-path'
     cmds:
       - '{{.BUILD_TOOL}} validate-version --version "{{.VERSION}}"'
-      - task: build:cli
+      - task: package:cli
         vars:
           TARGET: '{{.TARGET}}'
       - '{{.BUILD_TOOL}} archive --input "{{.CLI_BINARY_PATH}}" --output "{{.CLI_ZIP_PATH}}" --entry-name "{{.CLI_BINARY_NAME}}"'
@@ -232,18 +250,20 @@ tasks:
         sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field binary-name'
       GUI_ZIP_PATH:
         sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field zip-path'
+      MAC_APP:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field mac-app-path'
     cmds:
       - '{{.BUILD_TOOL}} validate-version --version "{{.VERSION}}"'
-      - task: package:mac
+
+      - task: package:gui
         vars:
           TARGET: '{{.TARGET}}'
-        if: '{{eq .TARGET_GOOS "darwin"}}'
-      - task: build:gui
-        vars:
-          TARGET: '{{.TARGET}}'
-        if: '{{ne .TARGET_GOOS "darwin"}}'
-      - cmd: '{{.BUILD_TOOL}} archive --input "{{.GUI_BINARY_PATH}}" --output "{{.GUI_ZIP_PATH}}" --entry-name "{{.GUI_BINARY_NAME}}"'
-        if: '{{ne .TARGET_GOOS "darwin"}}'
+
+      - if: '{{eq .TARGET_GOOS "darwin"}}'
+        cmd: '{{.BUILD_TOOL}} archive --input "{{.MAC_APP}}" --output "{{.GUI_ZIP_PATH}}" --entry-name "{{.APP_NAME}}.app"'
+
+      - if: '{{ne .TARGET_GOOS "darwin"}}'
+        cmd: '{{.BUILD_TOOL}} archive --input "{{.GUI_BINARY_PATH}}" --output "{{.GUI_ZIP_PATH}}" --entry-name "{{.GUI_BINARY_NAME}}"'
 
   dist:checksums:
     desc: Generate release checksums for zip artifacts in dist
