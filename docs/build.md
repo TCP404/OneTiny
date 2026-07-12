@@ -51,14 +51,14 @@ dist/onetiny-checksums.txt
 本地优先使用 `just`：
 
 ```bash
-rtk just info
+rtk just dev-info
 rtk just check
 rtk just cli
 rtk just gui
 rtk just dev
 rtk just hooks-install
-rtk just precommit
-rtk just prepush
+rtk just check-precommit
+rtk just check-prepush
 ```
 
 需要复现 CI 时使用 `task`：
