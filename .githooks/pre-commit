@@ -17,11 +17,11 @@ cleanup() {
 trap cleanup EXIT
 
 git diff --binary > "$before"
-task precommit
+task check:precommit
 git diff --binary > "$after"
 
 if ! cmp -s "$before" "$after"; then
-  echo "pre-commit: task precommit modified unstaged files." >&2
+  echo "pre-commit: task check:precommit modified unstaged files." >&2
   echo "Review the changes, stage the intended files, then commit again." >&2
   git status --short
   exit 1

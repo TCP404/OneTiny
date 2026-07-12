@@ -19,7 +19,7 @@ help:
 [doc("Show computed build settings")]
 [group("Main")]
 info target=target:
-    task info TARGET="{{ target }}" VERSION="{{ version }}"
+    task dev:info TARGET="{{ target }}" VERSION="{{ version }}"
 
 [doc("Run baseline checks")]
 [group("Main")]
@@ -29,12 +29,12 @@ check:
 [doc("Run required checks before commit")]
 [group("Main")]
 precommit:
-    task precommit
+    task check:precommit
 
 [doc("Run required checks before push")]
 [group("Main")]
 prepush:
-    task prepush
+    task check:prepush
 
 [doc("Install repository Git hooks")]
 [group("Main")]
@@ -64,22 +64,22 @@ build-cli target=target:
 [doc("Format Go source files")]
 [group("Quality")]
 format:
-    task format
+    task go:format
 
 [doc("Apply Go source modernization fixes")]
 [group("Quality")]
 fix:
-    task fix
+    task go:fix
 
 [doc("Run Go lint baseline")]
 [group("Quality")]
 lint:
-    task lint
+    task go:lint
 
 [doc("Run Go tests")]
 [group("Quality")]
 test:
-    task test
+    task go:test
 
 [doc("Produce the installable CLI artifact for TARGET")]
 [group("Package")]
@@ -103,10 +103,10 @@ dist-gui target=target:
 
 [doc("Generate release checksums")]
 [group("Dist")]
-checksums:
+dist-checksums:
     task dist:checksums
 
 [doc("Remove build and dist artifacts")]
 [group("Maintenance")]
 clean:
-    task clean
+    task dev:clean

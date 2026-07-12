@@ -9,4 +9,4 @@ if ! command -v task >/dev/null 2>&1; then
   exit 1
 fi
 
-task prepush
+task check:prepush

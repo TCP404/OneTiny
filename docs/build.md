@@ -64,7 +64,7 @@ rtk just prepush
 需要复现 CI 时使用 `task`：
 
 ```bash
-rtk task info TARGET=windows-amd64
+rtk task dev:info TARGET=windows-amd64
 rtk task dist:cli TARGET=linux-amd64 VERSION=v0.6.1
 rtk task dist:gui TARGET=windows-amd64 VERSION=v0.6.1
 rtk task package:gui TARGET=darwin-arm64 VERSION=v0.6.1
