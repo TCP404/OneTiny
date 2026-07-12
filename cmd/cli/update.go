@@ -110,7 +110,7 @@ func (u *update) updateVersion(targetVersion string) error {
 	}
 
 	// 检查当前系统是 linux 还是 mac 还是 windows决定 Assets 用哪个,然后进行下载
-	name, ok := version.ReleaseName[runtime.GOOS]
+	name, ok := updateAssetName(runtime.GOOS)
 	if !ok {
 		u.msg = color.YellowString("暂时没有适合您的系统的版本，请自行下载编译")
 		return nil
@@ -196,6 +196,16 @@ func splitVersion(version string) (v []string) {
 		major = sArr[0]
 	}
 	return append(v, major, minor, revision)
+}
+
+func updateAssetName(goos string) (string, bool) {
+	names := map[string]string{
+		"linux":   "OneTiny",
+		"windows": "OneTiny.exe",
+		"darwin":  "OneTiny_mac",
+	}
+	name, ok := names[goos]
+	return name, ok
 }
 
 func checkVersion(version string) error {
