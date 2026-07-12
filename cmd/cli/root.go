@@ -30,7 +30,7 @@ func initCLI(output io.Writer) {
 		Aliases: []string{"h"},
 		Usage:   "打印帮助信息",
 	}
-	cli.HelpPrinter = func(w io.Writer, temp string, data interface{}) {
+	cli.HelpPrinter = func(w io.Writer, temp string, data any) {
 		cli.HelpPrinterCustom(w, temp, data, nil)
 		os.Exit(0)
 	}

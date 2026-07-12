@@ -2,33 +2,7 @@ set dotenv-load := true
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 version := env("VERSION", "v0.6.0")
-app_name := "OneTiny"
-cli_name := "onetiny-cli"
-bin_dir := "build/bin"
-frontend_dir := "frontend"
-logo_png := "resource/logo/logo.png"
-appicon := "build/appicon.png"
-runtime_icon := "internal/gui/assets/appicon.png"
-mac_icon := "build/darwin/icons.icns"
-windows_icon := "build/windows/icon.ico"
-windows_manifest := "internal/gui/assets/windows/wails.exe.manifest"
-windows_info := "internal/gui/assets/windows/info.json"
-mac_info := "internal/gui/assets/darwin/Info.plist"
-gui_main := "./cmd/gui"
-cli_main := "./cmd/cli"
-upx := env("UPX", "upx")
-upx_flags := env("UPX_FLAGS", "--best")
-host_goos := if os() == "macos" { "darwin" } else { os() }
-target_goos := env("GOOS", host_goos)
-goarch := env("GOARCH", `go env GOARCH`)
-exe_suffix := if target_goos == "windows" { ".exe" } else { "" }
-windows_gui_ldflags := if target_goos == "windows" { " -H windowsgui" } else { "" }
-default_build_recipe := if host_goos == "darwin" { if target_goos == "darwin" { "package-mac" } else { "build-gui" } } else { "build-gui" }
-go_ldflags := f'-s -w -X github.com/tcp404/OneTiny/internal/version.Version={{version}}{{windows_gui_ldflags}}'
-gui_binary := f'{{bin_dir}}/{{app_name}}{{exe_suffix}}'
-cli_binary := f'{{bin_dir}}/{{cli_name}}{{exe_suffix}}'
-mac_app := f'{{bin_dir}}/{{app_name}}.app'
-windows_syso := f'cmd/gui/rsrc_windows_{{goarch}}.syso'
+target := env("TARGET", "")
 
 alias b := build
 alias d := dev
@@ -44,118 +18,94 @@ alias package := package-mac
 help:
     @just --list --no-aliases
 
-[doc("Development build: frontend assets, icons, and GUI binary")]
-[group("Main")]
-dev: build-gui
-
-[doc("Build the default desktop artifact for this host")]
-[group("Main")]
-build:
-    @just {{ default_build_recipe }}
-
-[doc("Build the release artifact for this host")]
-[group("Main")]
-release:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    just {{ default_build_recipe }}
-    if [[ "{{ default_build_recipe }}" != "package-mac" ]]; then
-      echo "release: {{ target_goos }} packaging is not implemented; produced {{ gui_binary }}"
-    fi
-
 [doc("Show computed build settings")]
 [group("Main")]
-info:
-    @printf "version=%s\n" "{{ version }}"
-    @printf "host_goos=%s\n" "{{ host_goos }}"
-    @printf "target_goos=%s\n" "{{ target_goos }}"
-    @printf "goarch=%s\n" "{{ goarch }}"
-    @printf "gui_binary=%s\n" "{{ gui_binary }}"
-    @printf "cli_binary=%s\n" "{{ cli_binary }}"
-    @printf "default_build_recipe=%s\n" "{{ default_build_recipe }}"
+info target=target:
+    task info TARGET="{{ target }}" VERSION="{{ version }}"
 
-[doc("Build GUI binary into build/bin")]
+[doc("Run baseline checks")]
+[group("Main")]
+check:
+    task check
+
+[doc("Development build: frontend assets, icons, and GUI binary")]
+[group("Main")]
+dev target=target:
+    task build:gui TARGET="{{ target }}" VERSION="{{ version }}"
+
+[doc("Build the default GUI artifact for this host")]
+[group("Main")]
+build target=target:
+    task build TARGET="{{ target }}" VERSION="{{ version }}"
+
+[doc("Build release GUI artifact for TARGET and update checksums")]
+[group("Main")]
+release target=target:
+    task release TARGET="{{ target }}" VERSION="{{ version }}"
+
+[doc("Build GUI binary into its dist staging directory")]
 [group("Build")]
-build-gui: _frontend _icons
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [[ "{{ target_goos }}" == "windows" ]]; then
-      just _windows-resource
-    fi
-    mkdir -p "{{ bin_dir }}"
-    go build -ldflags '{{ go_ldflags }}' -o "{{ gui_binary }}" "{{ gui_main }}"
+build-gui target=target:
+    task build:gui TARGET="{{ target }}" VERSION="{{ version }}"
 
-[doc("Build CLI binary into build/bin")]
+[doc("Build CLI binary into its dist staging directory")]
 [group("Build")]
-build-cli:
-    mkdir -p "{{ bin_dir }}"
-    go build -ldflags '{{ go_ldflags }}' -o "{{ cli_binary }}" "{{ cli_main }}"
+build-cli target=target:
+    task build:cli TARGET="{{ target }}" VERSION="{{ version }}"
 
-[doc("macOS: create build/bin/OneTiny.app")]
+[doc("Build frontend assets")]
+[group("Build")]
+frontend:
+    task build:frontend
+
+[doc("Generate Wails icons")]
+[group("Build")]
+icons:
+    task build:icons
+
+[doc("Build and archive CLI release artifact")]
+[group("Dist")]
+dist-cli target=target:
+    task dist:cli TARGET="{{ target }}" VERSION="{{ version }}"
+
+[doc("Build and archive GUI release artifact")]
+[group("Dist")]
+dist-gui target=target:
+    task dist:gui TARGET="{{ target }}" VERSION="{{ version }}"
+
+[doc("Generate release checksums")]
+[group("Dist")]
+checksums:
+    task dist:checksums
+
+[doc("macOS: create and archive build/bin/OneTiny.app")]
 [group("Package")]
-package-mac:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [[ "{{ host_goos }}" != "darwin" ]]; then
-      echo "package-mac must be run on macOS"
-      exit 1
-    fi
-    if [[ "{{ target_goos }}" != "darwin" ]]; then
-      echo "package-mac requires GOOS unset or GOOS=darwin"
-      exit 1
-    fi
-    just build-gui
-    rm -rf "{{ mac_app }}"
-    mkdir -p "{{ mac_app }}/Contents/MacOS" "{{ mac_app }}/Contents/Resources"
-    cp "{{ gui_binary }}" "{{ mac_app }}/Contents/MacOS/{{ app_name }}"
-    cp "{{ mac_icon }}" "{{ mac_app }}/Contents/Resources/icons.icns"
-    cp "{{ mac_info }}" "{{ mac_app }}/Contents/Info.plist"
-    codesign --force --deep --sign - "{{ mac_app }}"
+package-mac target=target:
+    task package:mac TARGET="{{ target }}" VERSION="{{ version }}"
 
-[doc("Windows: package target is not implemented yet")]
+[doc("Windows package placeholder")]
 [group("Package")]
 package-windows:
-    @echo "package-windows is not implemented yet; use just build-gui to create {{ gui_binary }}"
-    @exit 1
+    task package:windows
 
-[doc("Linux: package target is not implemented yet")]
+[doc("Linux package placeholder")]
 [group("Package")]
 package-linux:
-    @echo "package-linux is not implemented yet; use just build-gui to create {{ gui_binary }}"
-    @exit 1
+    task package:linux
 
-[doc("Compress GUI binary with UPX")]
-[group("Maintenance")]
-compress: build-gui
-    {{ upx }} {{ upx_flags }} "{{ gui_binary }}"
-
-[doc("Remove build artifacts")]
+[doc("Remove build and dist artifacts")]
 [group("Maintenance")]
 clean:
-    rm -rf "{{ bin_dir }}"
-    rm -f cmd/gui/*.syso
+    task clean
 
 [private]
 _frontend:
-    npm install --prefix "{{ frontend_dir }}"
-    npm run build --prefix "{{ frontend_dir }}"
+    task build:frontend
 
 [private]
-_icons: _runtime-icon
-    mkdir -p build build/darwin build/windows
-    cp "{{ runtime_icon }}" "{{ appicon }}"
-    wails3 generate icons -input "{{ appicon }}" -macfilename "{{ mac_icon }}" -windowsfilename "{{ windows_icon }}"
+_icons:
+    task build:icons
 
 [private]
-_runtime-icon:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [[ -f "{{ runtime_icon }}" && ! "{{ logo_png }}" -nt "{{ runtime_icon }}" ]]; then
-      exit 0
-    fi
-    mkdir -p internal/gui/assets
-    cp "{{ logo_png }}" "{{ runtime_icon }}"
-
-[private]
-_windows-resource:
-    wails3 generate syso -arch "{{ goarch }}" -icon "{{ windows_icon }}" -manifest "{{ windows_manifest }}" -info "{{ windows_info }}" -out "{{ windows_syso }}"
+_windows-resource target=target:
+    task build:windows-resource TARGET="{{ target }}"

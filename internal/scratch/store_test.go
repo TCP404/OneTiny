@@ -2,6 +2,7 @@ package scratch
 
 import (
 	"bytes"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -228,7 +229,7 @@ func TestStoreConcurrentAddAndList(t *testing.T) {
 	expected := make(map[string][]byte, 50)
 	var expectedMu sync.Mutex
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -239,7 +240,7 @@ func TestStoreConcurrentAddAndList(t *testing.T) {
 				return
 			}
 			expectedMu.Lock()
-			expected[added.ID] = append([]byte(nil), payload...)
+			expected[added.ID] = slices.Clone(payload)
 			expectedMu.Unlock()
 			_ = store.List()
 		}(i)

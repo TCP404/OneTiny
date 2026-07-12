@@ -103,11 +103,11 @@ func TestConcurrentSnapshotAndUpdate(t *testing.T) {
 	})
 
 	var wg sync.WaitGroup
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		wg.Add(1)
 		go func(port int) {
 			defer wg.Done()
-			for j := 0; j < 100; j++ {
+			for j := range 100 {
 				if j%2 == 0 {
 					cfg.Update(Patch{Port: &port})
 				} else {

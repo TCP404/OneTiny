@@ -3,6 +3,7 @@ package updater
 import (
 	"fmt"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -69,10 +70,5 @@ func isSupportedArch(arch string) bool {
 }
 
 func isSupportedOS(goos string, supported ...string) bool {
-	for _, candidate := range supported {
-		if goos == candidate {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(supported, goos)
 }

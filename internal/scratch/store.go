@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"slices"
 	"sync"
 	"time"
 )
@@ -105,7 +106,7 @@ func (s *Store) Add(kind Kind, mimeType string, data []byte) (Item, error) {
 
 	id := ContentID(kind, mimeType, data)
 	now := s.currentTimeLocked()
-	copyData := append([]byte(nil), data...)
+	copyData := slices.Clone(data)
 
 	if existingIdx, ok := s.index[id]; ok {
 		existing := s.items[existingIdx]
@@ -226,7 +227,7 @@ func (s *Store) trimToCapacityLocked() {
 		s.reindexLocked()
 		return
 	}
-	s.items = append([]*Item(nil), s.items[:s.limits.MaxItems]...)
+	s.items = slices.Clone(s.items[:s.limits.MaxItems])
 	s.reindexLocked()
 }
 
@@ -242,7 +243,7 @@ func cloneItem(item *Item) Item {
 		return Item{}
 	}
 	out := *item
-	out.Data = append([]byte(nil), item.Data...)
+	out.Data = slices.Clone(item.Data)
 	return out
 }
 
@@ -253,17 +254,14 @@ func summarizeItem(item *Item, textPreviewBytes int) Summary {
 	size := len(item.Data)
 	previewBytes := 0
 	if item.Kind == KindText && textPreviewBytes > 0 {
-		previewBytes = textPreviewBytes
-		if previewBytes > size {
-			previewBytes = size
-		}
+		previewBytes = min(textPreviewBytes, size)
 	}
 	return Summary{
 		ID:        item.ID,
 		Kind:      item.Kind,
 		MimeType:  item.MimeType,
 		Size:      size,
-		Preview:   append([]byte(nil), item.Data[:previewBytes]...),
+		Preview:   slices.Clone(item.Data[:previewBytes]),
 		Truncated: previewBytes < size,
 		CreatedAt: item.CreatedAt,
 		UpdatedAt: item.UpdatedAt,

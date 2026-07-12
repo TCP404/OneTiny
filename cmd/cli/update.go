@@ -119,7 +119,7 @@ func (u *update) updateVersion(targetVersion string) error {
 		assert *ReleaseAsset
 		l      = len(versionInfo.Assets)
 	)
-	for i := 0; i < l; i++ {
+	for i := range l {
 		if versionInfo.Assets[i].Name == name {
 			assert = &versionInfo.Assets[i]
 			break
@@ -170,12 +170,9 @@ func (u *update) updateLatest() error {
 }
 
 func (u *update) isLatest(version []string) bool {
-	max := len(version)
-	if max > len(u.currVersion) {
-		max = len(u.currVersion)
-	}
+	max := min(len(version), len(u.currVersion))
 
-	for i := 0; i < max; i++ {
+	for i := range max {
 		if version[i] < u.currVersion[i] {
 			return false
 		}

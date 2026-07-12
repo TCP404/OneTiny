@@ -23,7 +23,7 @@ func parseVersion(version string) ([3]int, bool) {
 		if part == "" {
 			return parsed, false
 		}
-		for j := 0; j < len(part); j++ {
+		for j := range len(part) {
 			if part[j] < '0' || part[j] > '9' {
 				return parsed, false
 			}

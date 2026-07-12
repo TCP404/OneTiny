@@ -131,7 +131,7 @@ func TestLoggerConcurrentWritesDoNotInterleaveJSONLines(t *testing.T) {
 	const count = 64
 	var wg sync.WaitGroup
 	wg.Add(count)
-	for i := 0; i < count; i++ {
+	for range count {
 		go func() {
 			defer wg.Done()
 			if err := logger.Write(Event{Event: EventAccess, Result: ResultSuccess, Status: 200}); err != nil {
