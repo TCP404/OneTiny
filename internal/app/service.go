@@ -160,7 +160,7 @@ func (s *Service) UpdateConfig(patch ConfigPatchDTO) (StatusDTO, error) {
 	}
 
 	if running && hasPortTarget && portChanged {
-		s.pendingPort = intPtr(targetPort)
+		s.pendingPort = new(targetPort)
 		s.portRestartRequired = true
 		s.lastErr = ErrPortRestartRequiresConfirm.Error()
 		return s.statusLocked(), nil
@@ -499,8 +499,4 @@ func timeValue(value *time.Time) time.Time {
 		return time.Time{}
 	}
 	return *value
-}
-
-func intPtr(value int) *int {
-	return &value
 }

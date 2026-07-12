@@ -23,7 +23,7 @@ func newTestStore(t *testing.T, content string) *Store {
 }
 
 func TestConfigDoesNotContainRuntimeOnlyFields(t *testing.T) {
-	cfgType := reflect.TypeOf(Config{})
+	cfgType := reflect.TypeFor[Config]()
 	for _, name := range []string{"Output", "OS", "IP", "Pwd", "SessionVal"} {
 		if _, ok := cfgType.FieldByName(name); ok {
 			t.Fatalf("Config contains runtime-only field %s", name)
