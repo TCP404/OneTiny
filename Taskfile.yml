@@ -32,6 +32,7 @@ tasks:
     cmds:
       - task --list
 
+
   build:cli:
     desc: Build CLI binary into its dist staging directory
     vars:
@@ -67,6 +68,7 @@ tasks:
       - '{{.BUILD_TOOL}} go-build --target "{{.TARGET}}" --kind gui --version "{{.VERSION}}" --output "{{.GUI_BINARY_PATH}}" --package "{{.GUI_MAIN}}"'
       - '{{.BUILD_TOOL}} verify --path "{{.GUI_BINARY_PATH}}" --kind file'
 
+
   package:cli:
     desc: Produce the installable CLI artifact for TARGET
     vars:
@@ -86,6 +88,7 @@ tasks:
       - task: 'package:{{.TARGET_GOOS}}'
         vars:
           TARGET: '{{.TARGET}}'
+
 
   dist:cli:
     desc: Build and archive CLI release artifact
@@ -136,6 +139,7 @@ tasks:
     cmds:
       - '{{.BUILD_TOOL}} checksums --dir "{{.DIST_DIR}}" --output "{{.DIST_DIR}}/onetiny-checksums.txt"'
 
+
   release:
     desc: Build release artifacts for TARGET
     vars:
@@ -145,6 +149,7 @@ tasks:
         vars:
           TARGET: '{{.TARGET}}'
       - task: dist:checksums
+
 
   dev:clean:
     desc: Remove build and dist artifacts
@@ -159,12 +164,6 @@ tasks:
       - '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind cli --version "{{.VERSION}}"'
       - '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --version "{{.VERSION}}"'
 
-  check:
-    desc: Run baseline Go checks
-    cmds:
-      - task: go:lint
-      - task: go:test
-      - go build ./cmd/cli ./cmd/gui
 
   go:format:
     desc: Format Go source files
@@ -186,6 +185,14 @@ tasks:
     cmds:
       - go test ./...
 
+
+  check:
+    desc: Run baseline Go checks
+    cmds:
+      - task: go:lint
+      - task: go:test
+      - go build ./cmd/cli ./cmd/gui
+
   check:precommit:
     desc: Required checks before commit
     cmds:
@@ -198,6 +205,7 @@ tasks:
     cmds:
       - task: go:test
 
+
   hooks:install:
     desc: Install repository Git hooks
     cmds:
@@ -205,6 +213,7 @@ tasks:
       - git config core.hooksPath .githooks
       - '{{.BUILD_TOOL}} verify --path ".githooks/pre-commit" --kind file'
       - '{{.BUILD_TOOL}} verify --path ".githooks/pre-push" --kind file'
+
 
   build:frontend:
     desc: Install and build frontend assets
