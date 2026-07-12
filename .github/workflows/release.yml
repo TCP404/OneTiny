@@ -91,7 +91,7 @@ jobs:
           mkdir -p "dist/${{ matrix.artifact }}"
           go build \
             -trimpath \
-            -ldflags "-s -w -X github.com/tcp404/OneTiny/internal/constant.VERSION=${VERSION}" \
+            -ldflags "-s -w -X github.com/tcp404/OneTiny/internal/version.Version=${VERSION}" \
             -o "dist/${{ matrix.artifact }}/${{ matrix.binary }}" \
             ./cmd/cli
           cd "dist/${{ matrix.artifact }}"
@@ -204,7 +204,7 @@ jobs:
 
           go build `
             -trimpath `
-            -ldflags "-s -w -H windowsgui -X github.com/tcp404/OneTiny/internal/constant.VERSION=$env:VERSION" `
+            -ldflags "-s -w -H windowsgui -X github.com/tcp404/OneTiny/internal/version.Version=$env:VERSION" `
             -o dist/onetiny-gui-windows-x64/OneTiny.exe `
             ./cmd/gui
 

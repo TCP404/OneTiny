@@ -3,6 +3,8 @@ version: '3'
 vars:
   APP_NAME: "OneTiny"
   BIN_DIR: "build/bin"
+  VERSION: "v0.6.0"
+  GO_LDFLAGS: '-s -w -X github.com/tcp404/OneTiny/internal/version.Version={{.VERSION}}'
 
 tasks:
   build:
@@ -16,7 +18,7 @@ tasks:
       - npm install --prefix frontend
       - npm run build --prefix frontend
       - mkdir -p "{{.BIN_DIR}}"
-      - go build -o "{{.BIN_DIR}}/{{.APP_NAME}}" ./cmd/gui
+      - go build -ldflags "{{.GO_LDFLAGS}}" -o "{{.BIN_DIR}}/{{.APP_NAME}}" ./cmd/gui
 
   linux:build:
     summary: Builds the Linux desktop application
@@ -24,7 +26,7 @@ tasks:
       - npm install --prefix frontend
       - npm run build --prefix frontend
       - mkdir -p "{{.BIN_DIR}}"
-      - go build -o "{{.BIN_DIR}}/{{.APP_NAME}}" ./cmd/gui
+      - go build -ldflags "{{.GO_LDFLAGS}}" -o "{{.BIN_DIR}}/{{.APP_NAME}}" ./cmd/gui
 
   windows:build:
     summary: Builds the Windows desktop application
@@ -32,4 +34,4 @@ tasks:
       - npm install --prefix frontend
       - npm run build --prefix frontend
       - if not exist "{{.BIN_DIR}}" mkdir "{{.BIN_DIR}}"
-      - go build -o "{{.BIN_DIR}}/{{.APP_NAME}}.exe" ./cmd/gui
+      - go build -ldflags "{{.GO_LDFLAGS}} -H windowsgui" -o "{{.BIN_DIR}}/{{.APP_NAME}}.exe" ./cmd/gui
