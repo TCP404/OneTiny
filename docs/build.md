@@ -55,7 +55,7 @@ rtk just info
 rtk just check
 rtk just cli
 rtk just gui
-rtk just build
+rtk just dev
 rtk just hooks-install
 rtk just precommit
 rtk just prepush
@@ -67,7 +67,7 @@ rtk just prepush
 rtk task info TARGET=windows-amd64
 rtk task dist:cli TARGET=linux-amd64 VERSION=v0.6.1
 rtk task dist:gui TARGET=windows-amd64 VERSION=v0.6.1
-rtk task package:mac TARGET=darwin-arm64 VERSION=v0.6.1
+rtk task package:gui TARGET=darwin-arm64 VERSION=v0.6.1
 ```
 
 ## 当前平台边界

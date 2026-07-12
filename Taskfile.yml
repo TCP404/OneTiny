@@ -178,11 +178,11 @@ tasks:
       TARGET_GOOS:
         sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field goos'
     cmds:
-      - task: 'package:{{if eq .TARGET_GOOS "darwin"}}mac{{else if eq .TARGET_GOOS "windows"}}windows{{else}}linux{{end}}'
+      - task: 'package:{{.TARGET_GOOS}}'
         vars:
           TARGET: '{{.TARGET}}'
 
-  package:mac:
+  package:darwin:
     desc: "macOS package: create and sign OneTiny.app"
     internal: true
     platforms: [darwin]
