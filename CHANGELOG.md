@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/tcp404/OneTiny/compare/v0.11.0...v0.11.1) (2026-07-12)
+
+
+### Documentation
+
+* **build:** update just recipe names after namespacing ([#26](https://github.com/tcp404/OneTiny/issues/26)) ([9ff4a50](https://github.com/tcp404/OneTiny/commit/9ff4a507a7961dba1899923d87da8e191a974315))
+
 ## [0.11.0](https://github.com/tcp404/OneTiny/compare/v0.10.1...v0.11.0) (2026-07-09)
 
 
