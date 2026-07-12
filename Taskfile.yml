@@ -1,35 +1,285 @@
 version: '3'
 
+dotenv: ['.env']
+
 vars:
-  APP_NAME: "OneTiny"
-  BIN_DIR: "build/bin"
+  APP_NAME: OneTiny
+  BUILD_TOOL: go run ./tools/buildtool
+  LOGO_PNG: resource/logo/logo.png
+  APPICON: build/appicon.png
+  MAC_ICON: build/darwin/icons.icns
+  WINDOWS_ICON: build/windows/icon.ico
+  RUNTIME_ICON: internal/gui/assets/appicon.png
+  WINDOWS_MANIFEST: internal/gui/assets/windows/wails.exe.manifest
+  WINDOWS_INFO: internal/gui/assets/windows/info.json
+  MAC_INFO: internal/gui/assets/darwin/Info.plist
+  FRONTEND_DIR: frontend
+  DIST_DIR: dist
+  GUI_MAIN: ./cmd/gui
+  CLI_MAIN: ./cmd/cli
+  VERSION: '{{.VERSION | default "v0.6.0"}}'
+  HOST_TARGET:
+    sh: go run ./tools/buildtool metadata --kind cli --field target
 
 tasks:
-  build:
-    summary: Builds the desktop application for the current platform
+  default:
+    desc: List available tasks
     cmds:
-      - task: "{{OS}}:build"
+      - task: help
 
-  darwin:build:
-    summary: Builds the macOS desktop application
+  help:
+    desc: List available tasks
     cmds:
-      - npm install --prefix frontend
-      - npm run build --prefix frontend
-      - mkdir -p "{{.BIN_DIR}}"
-      - go build -o "{{.BIN_DIR}}/{{.APP_NAME}}" ./cmd/gui
+      - task --list
 
-  linux:build:
-    summary: Builds the Linux desktop application
-    cmds:
-      - npm install --prefix frontend
-      - npm run build --prefix frontend
-      - mkdir -p "{{.BIN_DIR}}"
-      - go build -o "{{.BIN_DIR}}/{{.APP_NAME}}" ./cmd/gui
 
-  windows:build:
-    summary: Builds the Windows desktop application
+  build:cli:
+    desc: Build CLI binary into its dist staging directory
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+      CLI_STAGING_DIR:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind cli --field staging-dir'
+      CLI_BINARY_PATH:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind cli --field binary-path'
     cmds:
-      - npm install --prefix frontend
-      - npm run build --prefix frontend
-      - if not exist "{{.BIN_DIR}}" mkdir "{{.BIN_DIR}}"
-      - go build -o "{{.BIN_DIR}}/{{.APP_NAME}}.exe" ./cmd/gui
+      - '{{.BUILD_TOOL}} ensure-dir --path "{{.CLI_STAGING_DIR}}"'
+      - '{{.BUILD_TOOL}} go-build --target "{{.TARGET}}" --kind cli --version "{{.VERSION}}" --output "{{.CLI_BINARY_PATH}}" --package "{{.CLI_MAIN}}" --cgo-enabled 0'
+      - '{{.BUILD_TOOL}} verify --path "{{.CLI_BINARY_PATH}}" --kind file'
+
+  build:gui:
+    desc: Build GUI binary into its dist staging directory
+    deps:
+      - build:frontend
+      - build:icons
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+      TARGET_GOOS:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field goos'
+      GUI_STAGING_DIR:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field staging-dir'
+      GUI_BINARY_PATH:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field binary-path'
+    cmds:
+      - if: '{{eq .TARGET_GOOS "windows"}}'
+        task: build:windows-resource
+        vars:
+          TARGET: '{{.TARGET}}'
+      - '{{.BUILD_TOOL}} ensure-dir --path "{{.GUI_STAGING_DIR}}"'
+      - '{{.BUILD_TOOL}} go-build --target "{{.TARGET}}" --kind gui --version "{{.VERSION}}" --output "{{.GUI_BINARY_PATH}}" --package "{{.GUI_MAIN}}"'
+      - '{{.BUILD_TOOL}} verify --path "{{.GUI_BINARY_PATH}}" --kind file'
+
+
+  package:cli:
+    desc: Produce the installable CLI artifact for TARGET
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+    cmds:
+      - task: build:cli
+        vars:
+          TARGET: '{{.TARGET}}'
+
+  package:gui:
+    desc: Produce the installable GUI artifact for TARGET
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+      TARGET_GOOS:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field goos'
+    cmds:
+      - task: 'package:{{.TARGET_GOOS}}'
+        vars:
+          TARGET: '{{.TARGET}}'
+
+
+  dist:cli:
+    desc: Build and archive CLI release artifact
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+      CLI_BINARY_PATH:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind cli --field binary-path'
+      CLI_BINARY_NAME:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind cli --field binary-name'
+      CLI_ZIP_PATH:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind cli --field zip-path'
+    cmds:
+      - '{{.BUILD_TOOL}} validate-version --version "{{.VERSION}}"'
+      - task: package:cli
+        vars:
+          TARGET: '{{.TARGET}}'
+      - '{{.BUILD_TOOL}} archive --input "{{.CLI_BINARY_PATH}}" --output "{{.CLI_ZIP_PATH}}" --entry-name "{{.CLI_BINARY_NAME}}"'
+
+  dist:gui:
+    desc: Build and archive GUI release artifact
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+      TARGET_GOOS:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field goos'
+      GUI_BINARY_PATH:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field binary-path'
+      GUI_BINARY_NAME:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field binary-name'
+      GUI_ZIP_PATH:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field zip-path'
+      MAC_APP:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field mac-app-path'
+    cmds:
+      - '{{.BUILD_TOOL}} validate-version --version "{{.VERSION}}"'
+
+      - task: package:gui
+        vars:
+          TARGET: '{{.TARGET}}'
+
+      - if: '{{eq .TARGET_GOOS "darwin"}}'
+        cmd: '{{.BUILD_TOOL}} archive --input "{{.MAC_APP}}" --output "{{.GUI_ZIP_PATH}}" --entry-name "{{.APP_NAME}}.app"'
+
+      - if: '{{ne .TARGET_GOOS "darwin"}}'
+        cmd: '{{.BUILD_TOOL}} archive --input "{{.GUI_BINARY_PATH}}" --output "{{.GUI_ZIP_PATH}}" --entry-name "{{.GUI_BINARY_NAME}}"'
+
+  dist:checksums:
+    desc: Generate release checksums for zip artifacts in dist
+    cmds:
+      - '{{.BUILD_TOOL}} checksums --dir "{{.DIST_DIR}}" --output "{{.DIST_DIR}}/onetiny-checksums.txt"'
+
+
+  release:
+    desc: Build release artifacts for TARGET
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+    cmds:
+      - task: dist:gui
+        vars:
+          TARGET: '{{.TARGET}}'
+      - task: dist:checksums
+
+
+  dev:clean:
+    desc: Remove build and dist artifacts
+    cmds:
+      - '{{.BUILD_TOOL}} remove --path build --path dist --path cmd/gui/rsrc_windows_amd64.syso --path cmd/gui/rsrc_windows_arm64.syso'
+
+  dev:info:
+    desc: Show computed build metadata for TARGET
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+    cmds:
+      - '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind cli --version "{{.VERSION}}"'
+      - '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --version "{{.VERSION}}"'
+
+
+  go:format:
+    desc: Format Go source files
+    cmds:
+      - gofmt -w cmd internal resource tools
+
+  go:fix:
+    desc: Apply Go source modernization fixes
+    cmds:
+      - go fix ./...
+
+  go:lint:
+    desc: Run Go lint baseline
+    cmds:
+      - go vet ./...
+
+  go:test:
+    desc: Run Go tests
+    cmds:
+      - go test ./...
+
+
+  check:
+    desc: Run baseline Go checks
+    cmds:
+      - task: go:lint
+      - task: go:test
+      - go build ./cmd/cli ./cmd/gui
+
+  check:precommit:
+    desc: Required checks before commit
+    cmds:
+      - task: go:fix
+      - task: go:format
+      - task: go:lint
+
+  check:prepush:
+    desc: Required checks before push
+    cmds:
+      - task: go:test
+
+
+  hooks:install:
+    desc: Install repository Git hooks
+    cmds:
+      - chmod +x .githooks/pre-commit .githooks/pre-push
+      - git config core.hooksPath .githooks
+      - '{{.BUILD_TOOL}} verify --path ".githooks/pre-commit" --kind file'
+      - '{{.BUILD_TOOL}} verify --path ".githooks/pre-push" --kind file'
+
+
+  build:frontend:
+    desc: Install and build frontend assets
+    internal: true
+    cmds:
+      - npm install --prefix "{{.FRONTEND_DIR}}"
+      - npm run build --prefix "{{.FRONTEND_DIR}}"
+
+  build:icons:
+    desc: Generate Wails icon assets
+    internal: true
+    cmds:
+      - '{{.BUILD_TOOL}} copy-file --src "{{.LOGO_PNG}}" --dst "{{.RUNTIME_ICON}}"'
+      - '{{.BUILD_TOOL}} ensure-dir --path build --path build/darwin --path build/windows'
+      - '{{.BUILD_TOOL}} copy-file --src "{{.RUNTIME_ICON}}" --dst "{{.APPICON}}"'
+      - wails3 generate icons -input "{{.APPICON}}" -macfilename "{{.MAC_ICON}}" -windowsfilename "{{.WINDOWS_ICON}}"
+      - '{{.BUILD_TOOL}} verify --path "{{.MAC_ICON}}" --kind file'
+      - '{{.BUILD_TOOL}} verify --path "{{.WINDOWS_ICON}}" --kind file'
+
+  build:windows-resource:
+    desc: Generate Windows GUI syso resources
+    internal: true
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+      TARGET_GOARCH:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field goarch'
+      WINDOWS_SYSO: cmd/gui/rsrc_windows_{{.TARGET_GOARCH}}.syso
+    cmds:
+      - wails3 generate syso -arch "{{.TARGET_GOARCH}}" -icon "{{.WINDOWS_ICON}}" -manifest "{{.WINDOWS_MANIFEST}}" -info "{{.WINDOWS_INFO}}" -out "{{.WINDOWS_SYSO}}"
+      - '{{.BUILD_TOOL}} verify --path "{{.WINDOWS_SYSO}}" --kind file'
+
+  package:darwin:
+    desc: "macOS package: create and sign OneTiny.app"
+    internal: true
+    platforms: [darwin]
+    vars:
+      TARGET: '{{.TARGET | default .HOST_TARGET}}'
+      GUI_BINARY_PATH:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field binary-path'
+      MAC_APP:
+        sh: '{{.BUILD_TOOL}} metadata --target "{{.TARGET}}" --kind gui --field mac-app-path'
+    cmds:
+      - '{{.BUILD_TOOL}} require-target-os --target "{{.TARGET}}" --os darwin'
+      - task: build:gui
+        vars:
+          TARGET: '{{.TARGET}}'
+      - '{{.BUILD_TOOL}} remove --path "{{.MAC_APP}}"'
+      - '{{.BUILD_TOOL}} ensure-dir --path "{{.MAC_APP}}/Contents/MacOS" --path "{{.MAC_APP}}/Contents/Resources"'
+      - '{{.BUILD_TOOL}} copy-file --src "{{.GUI_BINARY_PATH}}" --dst "{{.MAC_APP}}/Contents/MacOS/{{.APP_NAME}}"'
+      - '{{.BUILD_TOOL}} copy-file --src "{{.MAC_ICON}}" --dst "{{.MAC_APP}}/Contents/Resources/icons.icns"'
+      - '{{.BUILD_TOOL}} copy-file --src "{{.MAC_INFO}}" --dst "{{.MAC_APP}}/Contents/Info.plist"'
+      - codesign --force --deep --sign - "{{.MAC_APP}}"
+      - '{{.BUILD_TOOL}} verify --path "{{.MAC_APP}}" --kind dir'
+
+  package:windows:
+    desc: "Windows package: build GUI binary (installer TODO)"
+    internal: true
+    cmds:
+      - task: build:gui
+        vars:
+          TARGET: '{{.TARGET | default .HOST_TARGET}}'
+
+  package:linux:
+    desc: "Linux package: build GUI binary (packaging TODO)"
+    internal: true
+    cmds:
+      - task: build:gui
+        vars:
+          TARGET: '{{.TARGET | default .HOST_TARGET}}'

@@ -18,9 +18,7 @@ permissions:
   contents: write
 
 env:
-  APP_NAME: OneTiny
-  CLI_NAME: onetiny-cli
-  FRONTEND_DIR: frontend
+  TASK_VERSION: v3.52.0
   WAILS_VERSION: v3.0.0-alpha.98-tui
 
 jobs:
@@ -50,22 +48,18 @@ jobs:
           - target: linux-x64
             goos: linux
             goarch: amd64
-            binary: onetiny-cli
             artifact: onetiny-cli-linux-x64
           - target: windows-x64
             goos: windows
             goarch: amd64
-            binary: onetiny-cli.exe
             artifact: onetiny-cli-windows-x64
           - target: darwin-x64
             goos: darwin
             goarch: amd64
-            binary: onetiny-cli
             artifact: onetiny-cli-darwin-x64
           - target: darwin-arm64
             goos: darwin
             goarch: arm64
-            binary: onetiny-cli
             artifact: onetiny-cli-darwin-arm64
 
     steps:
@@ -81,21 +75,11 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
+      - name: Install Task
+        run: go install "github.com/go-task/task/v3/cmd/task@${TASK_VERSION}"
+
       - name: Build CLI
-        env:
-          CGO_ENABLED: "0"
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          VERSION: ${{ inputs.tag_name }}
-        run: |
-          mkdir -p "dist/${{ matrix.artifact }}"
-          go build \
-            -trimpath \
-            -ldflags "-s -w -X github.com/tcp404/OneTiny/internal/constant.VERSION=${VERSION}" \
-            -o "dist/${{ matrix.artifact }}/${{ matrix.binary }}" \
-            ./cmd/cli
-          cd "dist/${{ matrix.artifact }}"
-          zip -9 "../${{ matrix.artifact }}.zip" "${{ matrix.binary }}"
+        run: task dist:cli TARGET=${{ matrix.goos }}-${{ matrix.goarch }} VERSION=${{ inputs.tag_name }}
 
       - name: Upload CLI artifact
         uses: actions/upload-artifact@v7
@@ -129,18 +113,12 @@ jobs:
 
       - name: Install build tools
         run: |
-          brew install just librsvg
+          brew install librsvg
+          go install "github.com/go-task/task/v3/cmd/task@${TASK_VERSION}"
           go install "github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}"
 
       - name: Build macOS app
-        env:
-          VERSION: ${{ inputs.tag_name }}
-        run: just package-mac
-
-      - name: Archive macOS app
-        run: |
-          mkdir -p dist
-          ditto -c -k --keepParent "build/bin/${APP_NAME}.app" "dist/onetiny-gui-darwin-arm64.zip"
+        run: task dist:gui TARGET=darwin-arm64 VERSION=${{ inputs.tag_name }}
 
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v7
@@ -173,43 +151,12 @@ jobs:
           node-version: "24"
 
       - name: Install Wails CLI
-        run: go install "github.com/wailsapp/wails/v3/cmd/wails3@$env:WAILS_VERSION"
+        run: |
+          go install "github.com/go-task/task/v3/cmd/task@$env:TASK_VERSION"
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@$env:WAILS_VERSION"
 
       - name: Build Windows GUI
-        env:
-          GOOS: windows
-          GOARCH: amd64
-          VERSION: ${{ inputs.tag_name }}
-        run: |
-          npm install --prefix "${env:FRONTEND_DIR}"
-          npm run build --prefix "${env:FRONTEND_DIR}"
-
-          New-Item -ItemType Directory -Force -Path build, build/darwin, build/windows, dist/onetiny-gui-windows-x64 | Out-Null
-          Copy-Item resource/logo/logo.png build/appicon.png
-
-          wails3 generate icons -input build/appicon.png -macfilename build/darwin/icons.icns -windowsfilename build/windows/icon.ico
-          if (!(Test-Path build/windows/icon.ico)) {
-            throw "Windows icon was not generated"
-          }
-
-          wails3 generate syso `
-            -arch amd64 `
-            -icon build/windows/icon.ico `
-            -manifest internal/gui/assets/windows/wails.exe.manifest `
-            -info internal/gui/assets/windows/info.json `
-            -out cmd/gui/rsrc_windows_amd64.syso
-          if (!(Test-Path cmd/gui/rsrc_windows_amd64.syso)) {
-            throw "Windows resource syso was not generated"
-          }
-
-          go build `
-            -trimpath `
-            -ldflags "-s -w -H windowsgui -X github.com/tcp404/OneTiny/internal/constant.VERSION=$env:VERSION" `
-            -o dist/onetiny-gui-windows-x64/OneTiny.exe `
-            ./cmd/gui
-
-      - name: Archive Windows GUI
-        run: Compress-Archive -Path dist/onetiny-gui-windows-x64/OneTiny.exe -DestinationPath dist/onetiny-gui-windows-x64.zip
+        run: task dist:gui TARGET=windows-amd64 VERSION=${{ inputs.tag_name }}
 
       - name: Upload Windows GUI artifact
         uses: actions/upload-artifact@v7
@@ -227,16 +174,29 @@ jobs:
       - mac-app
       - windows-gui
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: refs/tags/${{ inputs.tag_name }}
+
       - name: Download build artifacts
         uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
 
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Install Task
+        run: go install "github.com/go-task/task/v3/cmd/task@${TASK_VERSION}"
+
       - name: Generate checksums
-        run: |
-          cd artifacts
-          sha256sum *.zip > onetiny-checksums.txt
+        run: task dist:checksums DIST_DIR=artifacts
 
       - name: Upload release assets
         env:

@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+if ! command -v task >/dev/null 2>&1; then
+  echo "pre-push: task command not found; install go-task and retry" >&2
+  exit 1
+fi
+
+task check:prepush
