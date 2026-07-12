@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+if ! command -v task >/dev/null 2>&1; then
+  echo "pre-commit: task command not found; install go-task and retry" >&2
+  exit 1
+fi
+
+before=$(mktemp)
+after=$(mktemp)
+cleanup() {
+  rm -f "$before" "$after"
+}
+trap cleanup EXIT
+
+git diff --binary > "$before"
+task precommit
+git diff --binary > "$after"
+
+if ! cmp -s "$before" "$after"; then
+  echo "pre-commit: task precommit modified unstaged files." >&2
+  echo "Review the changes, stage the intended files, then commit again." >&2
+  git status --short
+  exit 1
+fi

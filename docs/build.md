@@ -56,6 +56,9 @@ rtk just check
 rtk just cli
 rtk just gui
 rtk just build
+rtk just hooks-install
+rtk just precommit
+rtk just prepush
 ```
 
 需要复现 CI 时使用 `task`：

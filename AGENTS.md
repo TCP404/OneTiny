@@ -69,6 +69,7 @@ rtk git worktree add .worktrees/update-agents-doc -b boii/update-agents-doc
 
 - 不要主动提交或推送，除非用户明确要求。
 - 任何提交都必须使用 commit skill，并使用 Conventional Commits。
+- 新 worktree 首次需要启用仓库 hooks 时，执行 `rtk task hooks:install`。
 - 每次提交前必须执行 `rtk task precommit`。该任务会运行 `go fix ./...`、`gofmt` 和 `go vet ./...`；如果它产生文件变更，先检查并按本次任务边界决定是否纳入提交。
 - 提交前确认 staged 文件只包含本次任务相关改动；不要把用户的无关改动、构建产物、临时文件或本地配置一起提交。
 - 每次推送前必须执行 `rtk task prepush`，其中至少包含 `go test ./...`。

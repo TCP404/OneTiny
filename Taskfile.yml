@@ -5,15 +5,15 @@ dotenv: ['.env']
 vars:
   APP_NAME: OneTiny
   BUILD_TOOL: go run ./tools/buildtool
-  FRONTEND_DIR: frontend
   LOGO_PNG: resource/logo/logo.png
   APPICON: build/appicon.png
-  RUNTIME_ICON: internal/gui/assets/appicon.png
   MAC_ICON: build/darwin/icons.icns
   WINDOWS_ICON: build/windows/icon.ico
+  RUNTIME_ICON: internal/gui/assets/appicon.png
   WINDOWS_MANIFEST: internal/gui/assets/windows/wails.exe.manifest
   WINDOWS_INFO: internal/gui/assets/windows/info.json
   MAC_INFO: internal/gui/assets/darwin/Info.plist
+  FRONTEND_DIR: frontend
   DIST_DIR: dist
   GUI_MAIN: ./cmd/gui
   CLI_MAIN: ./cmd/cli
@@ -78,6 +78,14 @@ tasks:
     desc: Required checks before push
     cmds:
       - task: test
+
+  hooks:install:
+    desc: Install repository Git hooks
+    cmds:
+      - chmod +x .githooks/pre-commit .githooks/pre-push
+      - git config core.hooksPath .githooks
+      - '{{.BUILD_TOOL}} verify --path ".githooks/pre-commit" --kind file'
+      - '{{.BUILD_TOOL}} verify --path ".githooks/pre-push" --kind file'
 
   build:
     desc: Build the GUI artifact for the current host target

@@ -38,6 +38,11 @@ precommit:
 prepush:
     task prepush
 
+[doc("Install repository Git hooks")]
+[group("Main")]
+hooks-install:
+    task hooks:install
+
 [doc("Development build: frontend assets, icons, and GUI binary")]
 [group("Main")]
 dev target=target:
